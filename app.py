@@ -47,23 +47,33 @@ def get_user_permissions(user_roles: List[str], user_config: Dict, form_code: st
     if form_code and form_config:
         permissions["can_create"] = can_user_create_form(user_roles, form_code, form_config, user_config)
     else:
-        # General permission check - if they can create any form
+        # General permission check - ONLY admins can create without form context
         admin_roles = authority_matrix.get("can_edit_any", [])
-        permissions["can_create"] = any(role in user_roles for role in admin_roles) or "JE" in user_roles
+        permissions["can_create"] = any(role in user_roles for role in admin_roles)
     
-    # Check other permissions (existing logic)
-    for perm_type, allowed_roles in authority_matrix.items():
-        if perm_type.startswith("can_") and any(role in user_roles for role in allowed_roles):
-            perm_key = perm_type
-            if perm_key == "can_edit_any" or perm_key == "can_edit_lower_hierarchy" or perm_key == "can_edit_own_only":
-                permissions["can_edit"] = True
-            elif perm_key == "can_delete_any" or perm_key == "can_delete_with_confirmation" or perm_key == "can_delete_own_draft_only":
-                permissions["can_delete"] = True
-            elif perm_key == "can_override":
-                permissions["can_override"] = True
+    # Check EDIT permissions - ONLY for explicit edit roles (not for JE or form creators)
+    edit_any_roles = authority_matrix.get("can_edit_any", [])
+    edit_lower_roles = authority_matrix.get("can_edit_lower_hierarchy", [])
+    edit_own_roles = authority_matrix.get("can_edit_own_only", [])
+    
+    # Only grant edit permission if user has explicit edit roles in authority matrix
+    if any(role in user_roles for role in edit_any_roles + edit_lower_roles + edit_own_roles):
+        permissions["can_edit"] = True
+    
+    # Check DELETE permissions - ONLY for explicit delete roles (not for JE or form creators)
+    delete_any_roles = authority_matrix.get("can_delete_any", [])
+    delete_confirm_roles = authority_matrix.get("can_delete_with_confirmation", [])
+    delete_own_roles = authority_matrix.get("can_delete_own_draft_only", [])
+    
+    # Only grant delete permission if user has explicit delete roles in authority matrix
+    if any(role in user_roles for role in delete_any_roles + delete_confirm_roles + delete_own_roles):
+        permissions["can_delete"] = True
+    
+    # Check override permissions
+    if any(role in user_roles for role in authority_matrix.get("can_override", [])):
+        permissions["can_override"] = True
     
     return permissions
-
 def can_user_create_form(user_roles: List[str], form_code: str, form_config: Dict, user_config: Dict) -> bool:
     """Check if user can create entries for a specific form"""
     authority_matrix = user_config.get("authority_matrix", {})
@@ -101,16 +111,38 @@ def can_user_edit_record(user_info: Dict, record: Dict, user_config: Dict) -> bo
     if form_status == "complete":
         return any(role in authority_matrix.get("can_edit_any", []) for role in user_roles)
     
-    # Users can edit their own records if they have any edit permission
+    # Get form configuration to check signing authority
+    form_code = record.get("form_code", "")
+    forms_lw = load_json("form_configs_enhanced.json")
+    forms_mpr = load_json("forms_mpr_configs_enhanced.json")
+    form_config = forms_lw.get(form_code) or forms_mpr.get(form_code, {})
+    
+    # Check if user has signing authority for this form
+    has_signing_authority = False
+    if form_config:
+        signatures_config = form_config.get("signatures", {})
+        for sig_name, sig_config in signatures_config.items():
+            required_roles = sig_config.get("roles", [])
+            if any(role in user_roles for role in required_roles):
+                has_signing_authority = True
+                break
+    
+    # ONLY users with signing authority can edit (not form creators without signing authority)
+    if has_signing_authority:
+        return True
+    
+    # Users can edit their own records ONLY if they have explicit edit permissions in authority matrix
     created_by_email = record.get("created_by_email", "")
     if created_by_email == user_info["email"]:
         edit_own = authority_matrix.get("can_edit_own_only", [])
         edit_lower = authority_matrix.get("can_edit_lower_hierarchy", [])
         edit_any = authority_matrix.get("can_edit_any", [])
+        
+        # Allow edit only if user has explicit edit permission (NOT just because they created it)
         if any(role in user_roles for role in edit_own + edit_lower + edit_any):
             return True
     
-    # Higher authority can edit lower authority records
+    # Higher authority can edit lower authority records (but only if they have explicit edit permissions)
     if any(role in authority_matrix.get("can_edit_lower_hierarchy", []) for role in user_roles):
         return True
     
@@ -126,15 +158,41 @@ def can_user_delete_record(user_info: Dict, record: Dict, user_config: Dict) -> 
         return True
     
     form_status = record.get("form_status", "draft")
-    
-    # Users can delete their own draft records
     created_by_email = record.get("created_by_email", "")
-    if (created_by_email == user_info["email"] and 
-        form_status == "draft" and 
-        any(role in authority_matrix.get("can_delete_own_draft_only", []) for role in user_roles)):
-        return True
     
-    # Higher authority can delete with confirmation
+    # Check if any signatures exist (even if form status is still draft)
+    signatures = record.get("signatures", {})
+    has_any_signatures = False
+    if signatures:
+        for sig_name, sig_data in signatures.items():
+            if isinstance(sig_data, dict) and sig_data.get("signed", False):
+                has_any_signatures = True
+                break
+            elif isinstance(sig_data, bool) and sig_data:
+                has_any_signatures = True
+                break
+    
+    # If form has any signatures, only admins and higher authority can delete
+    if has_any_signatures:
+        # Higher authority can delete with confirmation
+        if any(role in authority_matrix.get("can_delete_with_confirmation", []) for role in user_roles):
+            return True
+        # No one else can delete once signed (except admins who are handled above)
+        return False
+    
+    # For completely unsigned forms (true drafts):
+    
+    # Users can delete their own draft records ONLY if they have explicit delete permissions
+    if (created_by_email == user_info["email"] and 
+        form_status == "draft"):
+        
+        delete_own_roles = authority_matrix.get("can_delete_own_draft_only", [])
+        
+        # Allow delete only if user has explicit delete permission AND no signatures exist
+        if any(role in user_roles for role in delete_own_roles):
+            return True
+    
+    # Higher authority can delete with confirmation (but only if they have explicit delete permissions)
     if any(role in authority_matrix.get("can_delete_with_confirmation", []) for role in user_roles):
         # Can't delete completed forms unless admin
         if form_status == "complete":
@@ -142,7 +200,6 @@ def can_user_delete_record(user_info: Dict, record: Dict, user_config: Dict) -> 
         return True
     
     return False
-
 def delete_record_with_files(record_id: str, file_metadata: List[Dict]) -> bool:
     """Delete a single record and its associated files"""
     try:
