@@ -74,6 +74,7 @@ def get_user_permissions(user_roles: List[str], user_config: Dict, form_code: st
         permissions["can_override"] = True
     
     return permissions
+
 def can_user_create_form(user_roles: List[str], form_code: str, form_config: Dict, user_config: Dict) -> bool:
     """Check if user can create entries for a specific form"""
     authority_matrix = user_config.get("authority_matrix", {})
@@ -200,6 +201,7 @@ def can_user_delete_record(user_info: Dict, record: Dict, user_config: Dict) -> 
         return True
     
     return False
+
 def delete_record_with_files(record_id: str, file_metadata: List[Dict]) -> bool:
     """Delete a single record and its associated files"""
     try:
