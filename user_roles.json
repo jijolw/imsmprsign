@@ -1,0 +1,125 @@
+{
+  "comment": "Enhanced IMS user-role directory with role mappings. In production, passwords must be hashed.",
+  
+  "passwords": {
+    "durghesh": "demo123",
+    "jijo.ei": "demo123",
+    "jaiprakash.s": "demo123",
+    "prateek.motwani": "demo123",
+    "harsha": "admin123",
+    "girinathan": "demo123",
+    "kannan": "demo123",
+    "muthuswami": "demo123",
+    "ravi.kumar": "demo123"
+  },
+  
+  "users": {
+    "durghesh": {
+      "name": "Durghesh",
+      "email": "durghesh@railway.gov.in",
+      "roles": ["JE"],
+      "department": "Junior Engineer – Shop"
+    },
+    "jijo.ei": {
+      "name": "Jijo E I",
+      "email": "jijo.ei@railway.gov.in",
+      "roles": ["SSE", "SENIOR_SECTION_ENGINEER"],
+      "department": "Section In-charge"
+    },
+    "jaiprakash.s": {
+      "name": "Jaiprakash S",
+      "email": "jaiprakash.s@railway.gov.in",
+      "roles": ["CONTROLLING_OFFICER", "AWM", "CO"],
+      "department": "Workshop / Operations"
+    },
+    "prateek.motwani": {
+      "name": "Prateek Motwani",
+      "email": "prateek.motwani@railway.gov.in",
+      "roles": ["DYCME", "DyCME", "MR"],
+      "department": "Mechanical"
+    },
+    "harsha": {
+      "name": "Harsha",
+      "email": "harsha@railway.gov.in",
+      "roles": ["ADMIN", "SSE/IMS", "SSE_IMS", "IMS"],
+      "department": "IMS Cell",
+      "allowed_signature_labels": ["SSE / IMS (Final)"]
+    },
+    "girinathan": {
+      "name": "Girinathan",
+      "email": "girinathan@railway.gov.in",
+      "roles": ["AUDITOR"],
+      "department": "Internal Audit",
+      "allowed_forms": ["LW4 13"]
+    },
+    "kannan": {
+      "name": "Kannan",
+      "email": "kannan@railway.gov.in",
+      "roles": ["CSO", "CHIEF_SAFETY_OFFICER"],
+      "department": "Chief Safety Office"
+    },
+    "muthuswami": {
+      "name": "Muthuswami",
+      "email": "muthuswami@railway.gov.in",
+      "roles": ["DYCEE", "DyCEE"],
+      "department": "Electrical"
+    },
+    "ravi.kumar": {
+      "name": "Ravi Kumar",
+      "email": "ravi.kumar@railway.gov.in",
+      "roles": ["INSPECTOR"],
+      "department": "Inspection"
+    }
+  },
+  
+  "role_descriptions": {
+    "JE": "Durgesh:Junior Engineer - Field operations, inspections, and initial entries",
+    "SSE": "JIJO E I.Senior Section Engineer - Technical oversight, inspection, safety compliance",
+    "INSPECTOR": "Quality Inspector - Equipment and process verification",
+    "AWM": "Assistant Works Manager - Workshop operations and approvals",
+    "CONTROLLING_OFFICER": "Controlling Officer - Operations and traffic approvals",
+    "CO": "Controlling Officer (Short form)",
+    "CSO": "Chief Safety Officer - Final safety reviews and authorizations",
+    "DYCME": "Deputy CME - Mechanical approvals for deviations, escalations",
+    "DyCME": "Deputy CME (Alternative spelling)",
+    "MR": "Mechanical Representative (Deputy CME)",
+    "DYCEE": "Deputy CEE - Electrical approvals for deviations, escalations",
+    "DyCEE": "Deputy CEE (Alternative spelling)",
+    "ADMIN": "System Administrator / SSE-IMS - IMS records finalization and overrides",
+    "SSE/IMS": "Senior Section Engineer - IMS (Same as ADMIN)",
+    "SSE_IMS": "Senior Section Engineer - IMS (Same as ADMIN)",
+    "IMS": "IMS Officer (Same as ADMIN)",
+    "AUDITOR": "Internal Auditor - Raises and verifies NCRs"
+  },
+  
+  "role_hierarchy": {
+    "ADMIN": 10,
+    "SSE/IMS": 10,
+    "SSE_IMS": 10,
+    "IMS": 10,
+    "DYCME": 8,
+    "DyCME": 8,
+    "MR": 8,
+    "DYCEE": 8,
+    "DyCEE": 8,
+    "CONTROLLING_OFFICER": 7,
+    "AWM": 7,
+    "CO": 7,
+    "CSO": 6,
+    "CHIEF_SAFETY_OFFICER": 6,
+    "SSE": 5,
+    "SENIOR_SECTION_ENGINEER": 5,
+    "AUDITOR": 4,
+    "INSPECTOR": 3,
+    "JE": 1
+  },
+  
+  "authority_matrix": {
+    "can_edit_any": ["ADMIN", "SSE/IMS", "SSE_IMS", "IMS"],
+    "can_delete_any": ["ADMIN", "SSE/IMS", "SSE_IMS", "IMS"],
+    "can_edit_lower_hierarchy": ["SSE", "CONTROLLING_OFFICER", "AWM", "CO", "DYCME", "DyCME", "MR", "DYCEE", "DyCEE"],
+    "can_delete_with_confirmation": ["SSE", "CONTROLLING_OFFICER", "AWM", "CO", "DYCME", "DyCME", "MR", "DYCEE", "DyCEE"],
+    "can_edit_own_only": ["JE", "INSPECTOR", "AUDITOR"],
+    "can_delete_own_draft_only": ["JE", "INSPECTOR", "AUDITOR"]
+  }
+}

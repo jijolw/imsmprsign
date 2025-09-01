@@ -1,0 +1,929 @@
+{
+  "LW4_01A": {
+    "title": "RAM Analysis File (EMS & OHSAS)",
+    "fields": [
+      "Section",
+      "Activity",
+      "Impact",
+      "ID",
+      "Condition",
+      "S",
+      "O",
+      "D",
+      "Index",
+      "Legal"
+    ],
+    "signatures": {
+      "Signed by AWM": {
+        "roles": ["AWM"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high", "urgent"],
+    "retention_period": "5_years"
+  },
+  "LW4_01B": {
+    "title": "HIRA Analysis File (EMS & OHSAS)",
+    "fields": [
+      "Section",
+      "Activity",
+      "Risk",
+      "ID",
+      "S",
+      "O",
+      "Index",
+      "Harm grade"
+    ],
+    "signatures": {
+      "Signed by AWM": {
+        "roles": ["AWM"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high", "urgent"],
+    "retention_period": "5_years"
+  },
+  "LW4_02": {
+    "title": "Monitoring Management Programme Record",
+    "fields": [
+      "Objective/Aspect/Hazard",
+      "Action Planned",
+      "Responsibility",
+      "Present Status",
+      "Target",
+      "Revised Target",
+      "Remarks",
+      "Completion Date"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "3_years"
+  },
+  "LW4_03": {
+    "title": "Mock Drill Record",
+    "fields": [
+      "Date",
+      "Time",
+      "Location",
+      "Nature of Incident",
+      "Equipments Involved",
+      "Observations",
+      "NC Noticed",
+      "Correction",
+      "Corrective Action"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by CSO": {
+        "roles": ["CSO"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high", "urgent"],
+    "retention_period": "3_years"
+  },
+  "LW4_04": {
+    "title": "Consumption of Natural Resources",
+    "fields": [
+      "Item",
+      "DBR/Chelan No & Date",
+      "Received Qty",
+      "Used Qty",
+      "Date of Consumption",
+      "Balance Qty",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "3_years"
+  },
+  "LW4_05": {
+    "title": "Waste Generation & Disposal Record",
+    "fields": [
+      "Date",
+      "Type of Waste",
+      "Qty Generated",
+      "Qty Disposed",
+      "DS8 No. & Date",
+      "Date of Disposal",
+      "Balance for Disposal"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "LW4_06": {
+    "title": "OH&S Complaints & Check-up Register",
+    "fields": [
+      "Date",
+      "Complaint/Hazard",
+      "Affected Area/Person",
+      "Apparent Cause",
+      "Investigation Details",
+      "Corrective Action",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_07": {
+    "title": "Accidents/Incidents & Loss Assessment",
+    "fields": [
+      "Date of Incident",
+      "Staff Involved",
+      "WCA Status",
+      "Incident Details",
+      "Injury",
+      "Loss Assessment"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      },
+      "Signed by CSO": {
+        "roles": ["CSO"],
+        "order": 3,
+        "depends_on": ["Signed by Controlling Officer"]
+      }
+    },
+    "priority_levels": ["high", "urgent"],
+    "retention_period": "7_years"
+  },
+  "LW4_10": {
+    "title": "Calibration History Record",
+    "fields": [
+      "Instrument Name",
+      "ID No",
+      "Range",
+      "Frequency",
+      "Least Count",
+      "Acceptance Criteria",
+      "Date of Calibration",
+      "Due Date",
+      "Calibrated By",
+      "Error Identified",
+      "Status",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_11": {
+    "title": "Verification History Record",
+    "fields": [
+      "ID No",
+      "Drawing No",
+      "Description",
+      "Purpose",
+      "Frequency",
+      "Acceptance Criteria",
+      "Verification Date",
+      "Due Date",
+      "Parameter",
+      "Actual",
+      "Deviation",
+      "Remarks"
+    ],
+    "signatures": {
+      "Checked By": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Verified By": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Checked By"]
+      },
+      "Reviewed By": {
+        "roles": ["AWM"],
+        "order": 3,
+        "depends_on": ["Verified By"]
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "LW4 13": {
+  "title": "Audit Non-Conformity Report (NCR)",
+  "fields": [
+    "Audit ID",
+    "Ref. Standard",
+    "Department / Shop / Section",
+    "NCR No.",
+    "NCR Date",
+    "Specific requirement violated (Clause)",
+    "Non Conformity (Major/Minor)",
+    "Root Cause",
+    "Correction Taken",
+    "Corrective Action Taken",
+    "Target Date for Corrective Action",
+    "Follow-up Audit Remarks",
+    "Follow-up Auditor’s Name",
+    "Follow-up Audit Date",
+    "Recommendation (Closed/Not Closed)"
+  ],
+  "signatures": {
+    "Auditor Stage-1": {
+      "display_label": "Auditor (Stage 1 – Raise NCR)",
+      "roles": ["AUDITOR"],
+      "order": 1,
+      "depends_on": []
+    },
+    "Auditee Acknowledgement (SSE)": {
+      "display_label": "Auditee / Section In-charge (SSE)",
+      "roles": ["SSE"],
+      "order": 2,
+      "depends_on": ["Auditor Stage-1"]
+    },
+    "SSE Confirm Corrective Action": {
+      "display_label": "SSE — Confirm Corrective Action Entered",
+      "roles": ["SSE"],
+      "order": 3,
+      "depends_on": ["Auditee Acknowledgement (SSE)"],
+      "requires_fields": [
+        "Root Cause",
+        "Correction Taken",
+        "Corrective Action Taken",
+        "Target Date for Corrective Action"
+      ]
+    },
+    "CO/AWM Approval": {
+      "display_label": "Controlling Officer / AWM Approval",
+      "roles": ["CONTROLLING_OFFICER","AWM"],
+      "order": 4,
+      "depends_on": ["SSE Confirm Corrective Action"]
+    },
+    "Follow-up Auditor": {
+      "display_label": "Follow-up Auditor",
+      "roles": ["AUDITOR"],
+      "order": 5,
+      "depends_on": ["CO/AWM Approval"]
+    },
+    "MR Closure (DyCME signs)": {
+      "display_label": "MR Closure Approval (signed by DyCME)",
+      "roles": ["DYCME"],
+      "order": 6,
+      "depends_on": ["Follow-up Auditor"]
+    }
+  },
+  "priority_levels": ["high","urgent"],
+  "retention_period": "5_years"
+},
+  "LW4 15": {
+  "title": "Change Request Form",
+  "fields": [
+    "Initiator Name","Date","Designation","Shop",
+    "Document Name","Chapter","Page No","Revision No",
+    "Details of Change","Reason"
+  ],
+  "signatures": {
+    "Signed by Initiator": {
+      "roles": ["JE"],
+      "order": 1,
+      "depends_on": []
+    },
+    "Signed by SSE": {
+      "roles": ["SSE"],
+      "order": 2,
+      "depends_on": ["Signed by Initiator"]
+    },
+    "Approved by CO/AWM": {
+      "display_label": "Approved by CO / AWM",
+      "roles": ["CONTROLLING_OFFICER","AWM"],
+      "order": 3,
+      "depends_on": ["Signed by SSE"]
+    },
+    "SSE/IMS (Final)": {
+      "display_label": "SSE / IMS (Final)",
+      "roles": ["ADMIN"],
+      "order": 4,
+      "depends_on": ["Approved by CO/AWM"]
+    }
+  },
+  "priority_levels": ["normal","high","urgent"],
+  "retention_period": "5_years"
+},
+  "LW4_16": {
+    "title": "Corrective Action Register",
+    "fields": [
+      "Sl.No",
+      "Source",
+      "Nonconformity",
+      "Corrective Action",
+      "Target Date",
+      "Implemented",
+      "Actual Date",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_18": {
+    "title": "Fire Extinguisher Testing / Refilling",
+    "fields": [
+      "ID No",
+      "Location",
+      "Refilled Date",
+      "Condition",
+      "Next Due"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "LW4_20": {
+    "title": "Disposition of NCP",
+    "fields": [
+      "Loco/Coach",
+      "Work Order",
+      "Component",
+      "Qty",
+      "NC Observed",
+      "Date",
+      "Disposition",
+      "Reinspection",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by JE": {
+        "roles": ["JE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Signed by JE"]
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 3,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_21": {
+    "title": "Data Analysis Record",
+    "fields": [
+      "NC/Complaint",
+      "Ref No",
+      "Date",
+      "Root Cause",
+      "Corrective Action",
+      "Further Analysis",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_22": {
+    "title": "System Deviation in Practice",
+    "fields": [
+      "Sl. No",
+      "Procedure Reference",
+      "Application Area",
+      "Date",
+      "Deviation Details",
+      "Period From",
+      "Period To",
+      "Deviation Status",
+      "Closed Date",
+      "Reasons for Not Closing",
+      "Extension Requested Upto",
+      "Authorising Remarks",
+      "Authorised Period From",
+      "Authorised Period To"
+    ],
+    "signatures": {
+      "Signature of SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signature of Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signature of SSE"]
+      },
+      "Signature of SSE/Shop": {
+        "roles": ["SSE"],
+        "order": 3,
+        "depends_on": ["Signature of Controlling Officer"]
+      },
+      "Signature of SSE/IN": {
+        "roles": ["SSE"],
+        "order": 4,
+        "depends_on": ["Signature of SSE/Shop"]
+      },
+      "Signature of Dy.CME/Dy.CEE": {
+        "roles": ["DYCME", "DYCEE"],
+        "order": 5,
+        "depends_on": ["Signature of SSE/IN"]
+      }
+    },
+    "priority_levels": ["high", "urgent"],
+    "retention_period": "7_years"
+  },
+  "LW4_23": {
+    "title": "Material Released Prior to Verification",
+    "fields": [
+      "Material",
+      "PL No",
+      "Qty",
+      "Urgency Reason",
+      "Released by SMM",
+      "Qty Released",
+      "Material Identified",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Approved by Officer": {
+        "roles": ["AWM", "CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_25": {
+    "title": "Internal Customer Complaint & Satisfaction Feedback",
+    "fields": [
+      "Customer Name",
+      "Period",
+      "Item",
+      "Performance",
+      "Rating",
+      "Remarks",
+      "Promptness",
+      "Complaints",
+      "Suggestions"
+    ],
+    "signatures": {
+      "Signed by Customer": {
+        "roles": ["JE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "3_years"
+  },
+  "LW4_26": {
+    "title": "Customer Complaints on Products and Services",
+    "fields": [
+      "Complaint No",
+      "Date",
+      "Customer",
+      "Complaint",
+      "Investigation",
+      "Observation",
+      "Corrective Action",
+      "Target Date"
+    ],
+    "signatures": {
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["high", "urgent"],
+    "retention_period": "5_years"
+  },
+  "LW4_27": {
+    "title": "Monitoring Customer Complaints",
+    "fields": [
+      "Month",
+      "Complaints Received",
+      "Section",
+      "Cumulative",
+      "Corrective Done",
+      "Pending",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_29": {
+    "title": "Requisition for Inter Shop Work Orders",
+    "fields": [
+      "Component",
+      "Drawing No",
+      "Sub-Assembly",
+      "Material PL",
+      "Route",
+      "WO No",
+      "Qty per Loco",
+      "Total Qty",
+      "Stock Status",
+      "Previous WO",
+      "Approval by Officer"
+    ],
+    "signatures": {
+      "Approval by Officer": {
+        "roles": ["AWM", "CONTROLLING_OFFICER"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_30": {
+    "title": "Machine/Plant Under Repair",
+    "fields": [
+      "Date",
+      "Time",
+      "Machine No",
+      "Unified Code",
+      "Shop",
+      "Description",
+      "Out of Order Date",
+      "Apparent Defect",
+      "Initiated By",
+      "Forwarded To"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "3_years"
+  },
+  "LW4_31": {
+    "title": "Work Order Register",
+    "fields": [
+      "W.O. No",
+      "Component Description",
+      "Qty",
+      "Material Req.",
+      "RM Source",
+      "Raw Available",
+      "Part Supply",
+      "Balance",
+      "Customer",
+      "Remarks"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "LW4_32": {
+    "title": "Environmental & Safety Non-Conformity Register",
+    "fields": [
+      "Date",
+      "NC Description",
+      "Area",
+      "Detected By",
+      "Impact",
+      "Corrective Action",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by SSE": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by Controlling Officer": {
+        "roles": ["CONTROLLING_OFFICER"],
+        "order": 2,
+        "depends_on": ["Signed by SSE"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "LW4_33": {
+    "title": "List of System Records",
+    "fields": [
+      "Record No",
+      "Title",
+      "Type",
+      "Location",
+      "Retention Period"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_35": {
+    "title": "Master List of Documents",
+    "fields": [
+      "Document Code",
+      "Version",
+      "Document Name",
+      "Copy Holder",
+      "Copy No",
+      "Issue Details",
+      "Rev Details",
+      "Withdrawal Status"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_36": {
+    "title": "Accident Report",
+    "fields": [
+      "Employee Name",
+      "Ticket No",
+      "Shop",
+      "Date/Time",
+      "Age",
+      "DOA",
+      "Address",
+      "Injury",
+      "Activity at Accident",
+      "Start Time",
+      "First Aid",
+      "Controlling Officer",
+      "Accident Summary",
+      "Witness 1/2"
+    ],
+    "signatures": {
+      "Signatures": {
+        "roles": ["SSE", "CONTROLLING_OFFICER"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["high", "urgent"],
+    "retention_period": "7_years"
+  },
+  "LW4_36A": {
+    "title": "LW4 36A",
+    "fields": [
+      "Employee Name",
+      "Ticket No",
+      "Sex",
+      "Shop",
+      "Date",
+      "Service Years",
+      "Injury",
+      "Accident Description",
+      "Cause",
+      "Agency",
+      "PPE Used",
+      "PPE Issued",
+      "Trained",
+      "Transport",
+      "Control",
+      "Avoidable",
+      "Suggestions"
+    ],
+    "signatures": {
+      "Signed by CSO": {
+        "roles": ["CSO"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["high"],
+    "retention_period": "7_years"
+  },
+  "LW4_37": {
+    "title": "List of Significant Energy Uses",
+    "fields": [
+      "Shop",
+      "Energy Source",
+      "Annual Consumption",
+      "Variables",
+      "Deviation Criteria",
+      "OCP No"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_38": {
+    "title": "List of Energy Sources",
+    "fields": [
+      "Energy Source",
+      "2021-22",
+      "2020-21",
+      "2019-20"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_39": {
+    "title": "List of Variables Affecting Energy Use",
+    "fields": [
+      "Variable",
+      "Units Consumed",
+      "Remarks"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_40": {
+    "title": "Current Energy Performance in Significant Areas",
+    "fields": [
+      "Substation",
+      "Shop",
+      "Device",
+      "Rating",
+      "Performance",
+      "Improvement Opportunities"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_41": {
+    "title": "Opportunities for Energy Performance Improvement",
+    "fields": [
+      "Opportunity",
+      "Energy Management Plan"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_42": {
+    "title": "Variables Affecting Significant Energy Performance",
+    "fields": [
+      "Variable",
+      "Units Consumed",
+      "Remarks"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_43": {
+    "title": "List of Electrical Energy Uses",
+    "fields": [
+      "Description",
+      "Qty",
+      "Shop"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_44": {
+    "title": "Energy Score Register",
+    "fields": [
+      "Machine Name",
+      "Shop",
+      "Connected Load",
+      "Consumption",
+      "Date",
+      "Action",
+      "Owner"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "permanent"
+  },
+  "LW4_45": {
+    "title": "Register for High Speed Diesel Consumption",
+    "fields": [
+      "Date",
+      "Description",
+      "Vehicle No",
+      "Qty Issued",
+      "Ticket No"
+    ],
+    "signatures": {
+      "Signed by Emp": {
+        "roles": ["JE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "LW4_46": {
+    "title": "Bharat Cutting Gas Cylinder Distribution",
+    "fields": [
+      "Date",
+      "Cylinder No",
+      "Shop",
+      "Company",
+      "Returned Date",
+      "Qty (Kgs)"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "3_years"
+  },
+  "LW4_47": {
+    "title": "Gas Acetylene Cylinder Distribution",
+    "fields": [
+      "Date",
+      "Cylinder No",
+      "Shop",
+      "Company",
+      "Returned Date",
+      "Qty (cu.m)"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "3_years"
+  }
+}

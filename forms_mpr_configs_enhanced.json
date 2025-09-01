@@ -1,0 +1,622 @@
+{
+  "MP4_06_08": {
+    "title": "Inspection Registers For Lathe, Machine & Miscellaneous Fitting Sections",
+    "fields": [
+      "Sl. No",
+      "W.O.No",
+      "Description",
+      "Qty",
+      "Parameters to be verified",
+      "Inspection details",
+      "C / NC",
+      "Sign. of Inspector",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_09": {
+    "title": "Inspection Check List for DEMU - Semi Permanent Coupling",
+    "fields": [
+      "Sl. No.",
+      "Description",
+      "Parameters to be verified",
+      "Standard.",
+      "Pre-Inspection 1",
+      "Pre-Inspection 2",
+      "Action Taken",
+      "Final Inspection 1",
+      "Final Inspection 2",
+      "C/NC"
+    ],
+    "signatures": {
+      "Inspector's Signature": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. Of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Inspector's Signature"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_11": {
+    "title": "Inspection Check List For Coach Draw Gear",
+    "fields": [
+      "REF.NO",
+      "DATE",
+      "Sl. No",
+      "Description",
+      "Parameters to be verified",
+      "As per the gauge",
+      "Pre-Inspection GO",
+      "Pre-Inspection NO GO",
+      "Action Taken",
+      "Final Inspection 1",
+      "Final Inspection 2",
+      "C / NC"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_12": {
+    "title": "Inspection Check List For Loco Side Buffer",
+    "fields": [
+      "Plunger body - Crack/ bend / wear",
+      "Plunger body - Outside diameter",
+      "Buffer case body - Crack / bend /wear",
+      "Buffer case body - Inside diameter",
+      "Plunger face - Radius profile",
+      "Bottom seating holes - Ovality",
+      "Split retainer ring - Crack",
+      "Spring RH & LH - Free Height",
+      "Spring seat center & ends - Bend",
+      "Back Plate - Bend",
+      "Buffer Assembly - Overall Length",
+      "REMARKS IF ANY"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_13": {
+    "title": "Inspection Check List For Coach Side Buffer",
+    "fields": [
+      "Plunger body - Crack/bend/ wear",
+      "Plunger body - Out side diameter",
+      "Plunger face/ False plate - Radius profile",
+      "Buffer case body - crack/bend/wear",
+      "Buffer case body - Inside diameter",
+      "Bottom seating holes - Ovality",
+      "Spindle - Bend/ thread wear",
+      "Rubber spring pad - Wear/ damage",
+      "Distance piece - Bulge/ damage",
+      "Makeup liner - Bend/ damage",
+      "Weld Joints - Crack/ slag inclusion",
+      "Rivets - Fit of rivets",
+      "Buffer assembly - Overall length",
+      "REMARKS IF ANY"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_14": {
+    "title": "Inspection Check List for Loco Center Buffer Coupler (CBC)",
+    "fields": [
+      "CBC Body, shank & guard - Corrosion/crack",
+      "Clevis & Knuckle - Corrosion/crack",
+      "Shank - Length",
+      "Shank - Bend",
+      "Shank - Butt wear",
+      "Yoke Hole - Diameter",
+      "Wear Plate - Total body width with wear plate",
+      "Clevis eye hole - Wear in dia",
+      "Clevis Pin - Diameter",
+      "Knuckle pin - Diameter",
+      "Knuckle eye hole - Wear in Dia",
+      "Knuckle Profile - Nose wear",
+      "Knuckle Profile - Hub wear",
+      "Knuckle Profile - Locking face wear",
+      "Screw coupling - Crack/wear",
+      "'U' Shackle - Dia",
+      "Chuck nut & collars - Wear",
+      "Locking assembly - Wear/bend/Crack",
+      "REMARKS IF ANY"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_15": {
+    "title": "Inspection Register for Coil Springs (Coaching Stock)",
+    "fields": [
+      "Date",
+      "Type of springs",
+      "Total springs tested",
+      "No. of springs passed",
+      "No. Of spring rejected for - Crack / damage",
+      "No. Of spring rejected for - Welded mark",
+      "No. Of spring rejected for - Breakage",
+      "No. Of spring rejected for - Less height under working load",
+      "Grouping under working load - Yellow",
+      "Grouping under working load - Blue",
+      "Grouping under working load - Green",
+      "Remarks"
+    ],
+    "signatures": {
+      "Sign. Of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_16": {
+    "title": "Inspection Registers for AC Loco Springs (Outer, Inner & Snubber)",
+    "fields": [
+      "Date",
+      "Type of springs",
+      "Total springs tested",
+      "No. of springs passed",
+      "No. Of Springs rejected for",
+      "Free height",
+      "Crack/ damage",
+      "Welded mark",
+      "Breakage",
+      "Less height under working load",
+      "Grouping under working load",
+      "Remarks",
+      "Sign. Of inspector"
+    ],
+    "signatures": {
+      "Sign. Of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_19": {
+    "title": "Inspection Checklist for Equalising Beam (Long & Short)",
+    "fields": [
+      "Sl. No",
+      "Description",
+      "Parameters to be Verified",
+      "Pre - Inspection",
+      "Final Inspection",
+      "C / NC",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_20": {
+    "title": "Inspection Check List for Spring Seat",
+    "fields": [
+      "REF.NO",
+      "DATE",
+      "Spring Seat Face - Crack / Bend / Porous",
+      "Lugs & Trunions - Crack / Bend / Porous",
+      "Rib - Crack / Bend / Porous",
+      "Dia of the Trunion / Yoke pin",
+      "Spot Face Dia",
+      "Spot Face Depth",
+      "Distance between Spring Seat Face To Trunion",
+      "Height Of The Lugs",
+      "Stud Holes Wear (Use M16 bolt)",
+      "Depth Of The Stud Holes",
+      "Thickness Of The Strengthening Rib",
+      "Width in Between Both Sides Of The Seating Faces",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signed by Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Signed by JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signed by Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_21": {
+    "title": "Inspection Check List - Spring Seat & Equalising Beam Assembly Set (Long & Short)",
+    "fields": [
+      "Sl. No",
+      "Description",
+      "Parameters to be Verified",
+      "Final Inspection",
+      "C/NC",
+      "Remarks"
+    ],
+    "signatures": {
+      "Signature of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign. of JE/SSE": {
+        "roles": ["JE", "SSE"],
+        "order": 2,
+        "depends_on": ["Signature of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_22": {
+    "title": "Inspection Register for BSS Hanger Crack Test",
+    "fields": [
+      "Sl.No.",
+      "Date",
+      "No. Of BSS Hangers tested",
+      "Passed Qty.",
+      "Rejected Qty. due to crack",
+      "Remarks"
+    ],
+    "signatures": {
+      "Sign of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign of SSE": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Sign of Inspector"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_24": {
+    "title": "Receipt & Despatch Register for ICF Bogie POH",
+    "fields": [
+      "Sl. No.",
+      "Bogie No.",
+      "Coach No",
+      "Date of receipt from CR",
+      "Date of Completion",
+      "Date of Despatch",
+      "Sign of Inspector",
+      "Sign of SE/SSE"
+    ],
+    "signatures": {
+      "Sign of Inspector": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Sign of SE/SSE": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Sign of Inspector"]
+      }
+    },
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "MP4_25": {
+    "title": "Despatch Register for Buffer Section",
+    "fields": [
+      "Sl.No.",
+      "Date",
+      "Coach /Loco No.",
+      "Buffer",
+      "Screw Coupling",
+      "CBC",
+      "Other Items",
+      "Chelan No.",
+      "Remarks"
+    ],
+    "signatures": {},
+    "priority_levels": ["normal"],
+    "retention_period": "5_years"
+  },
+  "MP4_27_29": {
+    "title": "Work Order Register (Division, Store, Inter Shop)",
+    "fields": [
+      "W.O.No. & Date",
+      "Description",
+      "W.O Qty.",
+      "Receipt particulars",
+      "Despatch particulars & part supply",
+      "Balan. Qty",
+      "Customer",
+      "Remarks",
+      "RM Reqd",
+      "RM from",
+      "RM available"
+    ],
+    "signatures": {
+      "SSE/MPR": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_30": {
+    "title": "Check Sheet For Bogie Frame & Subcomponents",
+    "fields": [
+      "Bogie No",
+      "Type",
+      "Date",
+      "Cleaning",
+      "Alignment",
+      "Axle Guide",
+      "Axle Guide Bush",
+      "Axle guide Rings",
+      "Axle guide Dust Shield Springs",
+      "Dust Shield",
+      "Crown Bolt",
+      "Crown Bolt Rubber Pad",
+      "Crown Bolt screwing Block",
+      "Anchor Link Bracket",
+      "Wire Rope Bracket",
+      "BSS hanger Bracket",
+      "BSS hanger Bracket steel bush",
+      "Alternate Bracket Bush",
+      "U Bracket Stem",
+      "U Bracket Strengthening Piece",
+      "Frame Corner Strengthening Piece",
+      "Anchor Link Cover Plate",
+      "Anchor Link Locking Plate",
+      "Brake Hanger pin stopper assly",
+      "Axle guide trammelling",
+      "BOLSTER - Cleaning",
+      "BOLSTER - Condition",
+      "BOLSTER - Twist",
+      "Anchor Link Bracket",
+      "Anchor Link Bracket Cover Plate",
+      "Eq.st Bracket 16T",
+      "Eq.st Bracket Bush",
+      "Centre pivot Sleeve",
+      "Centre pivot silent block",
+      "Centre pivot Spl bolt and nut",
+      "Side Bearer",
+      "LOWER SPRING BEAM - Cleaning",
+      "LOWER SPRING BEAM - Condition",
+      "Eq.stay Bkt",
+      "Eq.stay Bkt Bush",
+      "Spring Guide Ring",
+      "Safety strap stem",
+      "BSS Hanger Bush",
+      "Br. Beam 45mm/65mm",
+      "Load Testing of brake Beam",
+      "Anchor link",
+      "Crack at neck portion of anchor link",
+      "Anchor link silent block",
+      "Eq.stay 16T",
+      "Outer Lever Bush",
+      "Pull Rod Bush",
+      "Inner lever bush",
+      "Block hanger Bush",
+      "Brake hanger bush",
+      "Actuating rod bush",
+      "BSS hanger",
+      "BSS hanger group",
+      "BSS hanger Block",
+      "BSS hanger block group",
+      "BSS hanger Pin",
+      "Secondary Suspension springs color",
+      "Brake Shoe Key"
+    ],
+    "signatures": {
+      "Supervisor / M&PR": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Supervisor / IN": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Supervisor / M&PR"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_31": {
+    "title": "Inspection Check List for Coach Center Buffer Coupler (CBC)",
+    "fields": [
+      "DATE",
+      "DOC",
+      "SCHEDULE",
+      "CODE",
+      "COACH",
+      "MAKE",
+      "Coupler Head Make, Sl. No/Month & year",
+      "Contour condemning limit gauge",
+      "Contour maintenance gauge (Knuckle profile gauge)",
+      "Aligning wing limit gauge",
+      "Vertical height condemning limit aligning wing pocket and guard arm gauge NO GO gauge",
+      "Knuckle nose wear and stretch limit gauge",
+      "Vertical height aligning wing pocket and guard arm gauge GO gauge",
+      "Anti-creep test",
+      "Check wear of bottom of shank",
+      "Condition of Knuckle - Make",
+      "Condition of Knuckle - Good/Worn out",
+      "Condition of Knuckle - New / old good",
+      "MPT TESTED",
+      "Condition of Knuckle pivot pin - Make",
+      "Condition of Knuckle pivot pin - Good/Worn out",
+      "Condition of Knuckle pivot pin - New / old good",
+      "Condition of Knuckle thrower - Make",
+      "Condition of Knuckle thrower - Good/Damaged",
+      "Condition of Knuckle thrower - New / old good",
+      "Condition of lock - Make",
+      "Condition of lock - Good/Worn out",
+      "Condition of lock - New / old good",
+      "Condition of double rotary lock lift assembly - Make",
+      "Condition of double rotary lock lift assembly - Good/Damaged",
+      "Condition of double rotary lock lift assembly - New / old good",
+      "Condition of support pin",
+      "Replacement of split pin for knuckle pivot pin",
+      "Replacement of split pin for knuckle support pin"
+    ],
+    "signatures": {
+      "Supervisor/Inspection": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Supervisor/Shop": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Supervisor/Inspection"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_32": {
+    "title": "Register for Visual Inspection of Coil Springs (FIAT BOGIE)",
+    "fields": [
+      "Coil/air",
+      "Coach code",
+      "Coach no",
+      "Date of attention",
+      "PRIMARY INNER SPRING - Broken",
+      "PRIMARY INNER SPRING - Notch/Visual",
+      "PRIMARY INNER SPRING - Tip Thickness",
+      "PRIMARY INNER SPRING - Low Stiffness",
+      "PRIMARY INNER SPRING - High Stiffness",
+      "PRIMARY OUTER SPRING - Broken",
+      "PRIMARY OUTER SPRING - Notch/Dent",
+      "PRIMARY OUTER SPRING - Tip Thickness",
+      "PRIMARY OUTER SPRING - Low Stiffness",
+      "SECONDARY INNER SPRING - Broken",
+      "SECONDARY INNER SPRING - Notch/Dent",
+      "SECONDARY INNER SPRING - Tip Thickness",
+      "SECONDARY INNER SPRING - Low Stiffness",
+      "SECONDARY OUTER SPRING - Broken",
+      "SECONDARY OUTER SPRING - Notch/Dent",
+      "SECONDARY OUTER SPRING - Tip Thickness",
+      "SECONDARY OUTER SPRING - Low Stiffness"
+    ],
+    "signatures": {
+      "SSE/IN": {
+        "roles": ["SSE"],
+        "order": 1,
+        "depends_on": []
+      },
+      "APE": {
+        "roles": ["AWM"],
+        "order": 2,
+        "depends_on": ["SSE/IN"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  },
+  "MP4_33": {
+    "title": "Register for Load Testing of Coil Springs (FIAT BOGIE)",
+    "fields": [
+      "Test Sr. No",
+      "Type",
+      "Test date",
+      "Manufacturing No.",
+      "Free height",
+      "Test load",
+      "Height under load",
+      "Bowing deflection (Secondary)",
+      "Test Result",
+      "Remarks"
+    ],
+    "signatures": {
+      "Sign": {
+        "roles": ["INSPECTOR"],
+        "order": 1,
+        "depends_on": []
+      },
+      "Inspector": {
+        "roles": ["SSE"],
+        "order": 2,
+        "depends_on": ["Sign"]
+      }
+    },
+    "priority_levels": ["normal", "high"],
+    "retention_period": "5_years"
+  }
+}
