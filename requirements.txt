@@ -1,3 +1,5 @@
 streamlit
 supabase
+plotly
 pandas
+weasyprint

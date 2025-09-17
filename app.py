@@ -11,6 +11,8 @@ from typing import Dict, Any, List, Optional
 import pandas as pd
 import streamlit as st
 from supabase import create_client, Client
+import plotly.express as px
+import plotly.graph_objects as go
 
 # --------------------------
 # Streamlit / Supabase setup
@@ -47,31 +49,20 @@ def get_user_permissions(user_roles: List[str], user_config: Dict, form_code: st
     if form_code and form_config:
         permissions["can_create"] = can_user_create_form(user_roles, form_code, form_config, user_config)
     else:
-        # General permission check - ONLY admins can create without form context
+        # General permission check - if they can create any form
         admin_roles = authority_matrix.get("can_edit_any", [])
-        permissions["can_create"] = any(role in user_roles for role in admin_roles)
+        permissions["can_create"] = any(role in user_roles for role in admin_roles) or "JE" in user_roles
     
-    # Check EDIT permissions - ONLY for explicit edit roles (not for JE or form creators)
-    edit_any_roles = authority_matrix.get("can_edit_any", [])
-    edit_lower_roles = authority_matrix.get("can_edit_lower_hierarchy", [])
-    edit_own_roles = authority_matrix.get("can_edit_own_only", [])
-    
-    # Only grant edit permission if user has explicit edit roles in authority matrix
-    if any(role in user_roles for role in edit_any_roles + edit_lower_roles + edit_own_roles):
-        permissions["can_edit"] = True
-    
-    # Check DELETE permissions - ONLY for explicit delete roles (not for JE or form creators)
-    delete_any_roles = authority_matrix.get("can_delete_any", [])
-    delete_confirm_roles = authority_matrix.get("can_delete_with_confirmation", [])
-    delete_own_roles = authority_matrix.get("can_delete_own_draft_only", [])
-    
-    # Only grant delete permission if user has explicit delete roles in authority matrix
-    if any(role in user_roles for role in delete_any_roles + delete_confirm_roles + delete_own_roles):
-        permissions["can_delete"] = True
-    
-    # Check override permissions
-    if any(role in user_roles for role in authority_matrix.get("can_override", [])):
-        permissions["can_override"] = True
+    # Check other permissions (existing logic)
+    for perm_type, allowed_roles in authority_matrix.items():
+        if perm_type.startswith("can_") and any(role in user_roles for role in allowed_roles):
+            perm_key = perm_type
+            if perm_key == "can_edit_any" or perm_key == "can_edit_lower_hierarchy" or perm_key == "can_edit_own_only":
+                permissions["can_edit"] = True
+            elif perm_key == "can_delete_any" or perm_key == "can_delete_with_confirmation" or perm_key == "can_delete_own_draft_only":
+                permissions["can_delete"] = True
+            elif perm_key == "can_override":
+                permissions["can_override"] = True
     
     return permissions
 
@@ -112,38 +103,16 @@ def can_user_edit_record(user_info: Dict, record: Dict, user_config: Dict) -> bo
     if form_status == "complete":
         return any(role in authority_matrix.get("can_edit_any", []) for role in user_roles)
     
-    # Get form configuration to check signing authority
-    form_code = record.get("form_code", "")
-    forms_lw = load_json("form_configs_enhanced.json")
-    forms_mpr = load_json("forms_mpr_configs_enhanced.json")
-    form_config = forms_lw.get(form_code) or forms_mpr.get(form_code, {})
-    
-    # Check if user has signing authority for this form
-    has_signing_authority = False
-    if form_config:
-        signatures_config = form_config.get("signatures", {})
-        for sig_name, sig_config in signatures_config.items():
-            required_roles = sig_config.get("roles", [])
-            if any(role in user_roles for role in required_roles):
-                has_signing_authority = True
-                break
-    
-    # ONLY users with signing authority can edit (not form creators without signing authority)
-    if has_signing_authority:
-        return True
-    
-    # Users can edit their own records ONLY if they have explicit edit permissions in authority matrix
+    # Users can edit their own records if they have any edit permission
     created_by_email = record.get("created_by_email", "")
     if created_by_email == user_info["email"]:
         edit_own = authority_matrix.get("can_edit_own_only", [])
         edit_lower = authority_matrix.get("can_edit_lower_hierarchy", [])
         edit_any = authority_matrix.get("can_edit_any", [])
-        
-        # Allow edit only if user has explicit edit permission (NOT just because they created it)
         if any(role in user_roles for role in edit_own + edit_lower + edit_any):
             return True
     
-    # Higher authority can edit lower authority records (but only if they have explicit edit permissions)
+    # Higher authority can edit lower authority records
     if any(role in authority_matrix.get("can_edit_lower_hierarchy", []) for role in user_roles):
         return True
     
@@ -159,41 +128,15 @@ def can_user_delete_record(user_info: Dict, record: Dict, user_config: Dict) -> 
         return True
     
     form_status = record.get("form_status", "draft")
+    
+    # Users can delete their own draft records
     created_by_email = record.get("created_by_email", "")
-    
-    # Check if any signatures exist (even if form status is still draft)
-    signatures = record.get("signatures", {})
-    has_any_signatures = False
-    if signatures:
-        for sig_name, sig_data in signatures.items():
-            if isinstance(sig_data, dict) and sig_data.get("signed", False):
-                has_any_signatures = True
-                break
-            elif isinstance(sig_data, bool) and sig_data:
-                has_any_signatures = True
-                break
-    
-    # If form has any signatures, only admins and higher authority can delete
-    if has_any_signatures:
-        # Higher authority can delete with confirmation
-        if any(role in authority_matrix.get("can_delete_with_confirmation", []) for role in user_roles):
-            return True
-        # No one else can delete once signed (except admins who are handled above)
-        return False
-    
-    # For completely unsigned forms (true drafts):
-    
-    # Users can delete their own draft records ONLY if they have explicit delete permissions
     if (created_by_email == user_info["email"] and 
-        form_status == "draft"):
-        
-        delete_own_roles = authority_matrix.get("can_delete_own_draft_only", [])
-        
-        # Allow delete only if user has explicit delete permission AND no signatures exist
-        if any(role in user_roles for role in delete_own_roles):
-            return True
+        form_status == "draft" and 
+        any(role in authority_matrix.get("can_delete_own_draft_only", []) for role in user_roles)):
+        return True
     
-    # Higher authority can delete with confirmation (but only if they have explicit delete permissions)
+    # Higher authority can delete with confirmation
     if any(role in authority_matrix.get("can_delete_with_confirmation", []) for role in user_roles):
         # Can't delete completed forms unless admin
         if form_status == "complete":
@@ -282,7 +225,7 @@ def load_user_config():
         with open("user_roles.json", "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"users": {}, "role_descriptions": {}, "authority_matrix": {}}
+        return {"users": {}, "role_descriptions": {}, "authority_matrix": {}, "passwords": {}}
 
 def hash_password(password: str) -> str:
     """Hash a password for storing"""
@@ -396,7 +339,7 @@ def get_form_signature_progress(signatures: Dict, form_config: Dict) -> Dict[str
         if isinstance(sig_data, dict) and sig_data.get("signed", False):
             completed += 1
     
-    progress = (completed / total_signatures) * 100
+    progress = (completed / total_signatures) * 100 if total_signatures else 100
     
     if completed == 0:
         status = "draft"
@@ -759,6 +702,177 @@ def load_json(path: str) -> Dict:
             return json.load(f)
     except Exception:
         return {}
+
+# --------------------------
+# Dashboard Functions
+# --------------------------
+def get_all_system_data():
+    """Fetch all records from the system"""
+    try:
+        result = sb.table(TABLE_NAME).select("*").order("created_at", desc=True).execute()
+        return result.data or []
+    except Exception as e:
+        st.error(f"Error fetching system data: {e}")
+        return []
+
+def create_priority_chart(data):
+    """Create priority distribution chart"""
+    if not data:
+        return None
+    
+    # Count priorities
+    priority_counts = {}
+    for record in data:
+        priority = record.get("priority", "normal")
+        priority_counts[priority] = priority_counts.get(priority, 0) + 1
+    
+    # Create bar chart
+    priorities = list(priority_counts.keys())
+    counts = list(priority_counts.values())
+    colors = {'normal': '#3498db', 'high': '#f39c12', 'urgent': '#e74c3c'}
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=priorities,
+            y=counts,
+            marker_color=[colors.get(p, '#95a5a6') for p in priorities],
+            text=counts,
+            textposition='auto',
+        )
+    ])
+    
+    fig.update_layout(
+        title="Priority Distribution",
+        xaxis_title="Priority Level",
+        yaxis_title="Number of Records",
+        height=400,
+        showlegend=False
+    )
+    
+    return fig
+
+def create_status_chart(data):
+    """Create status distribution pie chart"""
+    if not data:
+        return None
+    
+    status_counts = {}
+    for record in data:
+        status = record.get("form_status", "draft")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=list(status_counts.keys()),
+        values=list(status_counts.values()),
+        hole=.3,
+        marker_colors=['#e74c3c', '#f39c12', '#2ecc71']
+    )])
+    
+    fig.update_layout(
+        title="Form Status Distribution",
+        height=400
+    )
+    
+    return fig
+
+def create_form_type_chart(data):
+    """Create form type distribution chart"""
+    if not data:
+        return None
+    
+    form_counts = {}
+    for record in data:
+        form_code = record.get("form_code", "Unknown")
+        form_counts[form_code] = form_counts.get(form_code, 0) + 1
+    
+    # Sort by count for better visualization
+    sorted_forms = sorted(form_counts.items(), key=lambda x: x[1], reverse=True)
+    forms = [x[0] for x in sorted_forms]
+    counts = [x[1] for x in sorted_forms]
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=counts,
+            y=forms,
+            orientation='h',
+            marker_color='#3498db',
+            text=counts,
+            textposition='auto',
+        )
+    ])
+    
+    fig.update_layout(
+        title="Records by Form Type",
+        xaxis_title="Number of Records",
+        yaxis_title="Form Code",
+        height=max(400, len(forms) * 30),
+        showlegend=False
+    )
+    
+    return fig
+
+def create_department_chart(data):
+    """Create department distribution chart"""
+    if not data:
+        return None
+    
+    dept_counts = {}
+    for record in data:
+        dept = record.get("created_by_department", "Unknown")
+        dept_counts[dept] = dept_counts.get(dept, 0) + 1
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=list(dept_counts.keys()),
+        values=list(dept_counts.values()),
+        hole=.3
+    )])
+    
+    fig.update_layout(
+        title="Records by Department",
+        height=400
+    )
+    
+    return fig
+
+def create_daily_activity_chart(data):
+    """Create daily activity chart for the last 30 days"""
+    if not data:
+        return None
+    
+    from datetime import timedelta
+    
+    # Get dates from last 30 days
+    today = datetime.now(timezone.utc).date()
+    dates = [(today - timedelta(days=i)).isoformat() for i in range(29, -1, -1)]
+    
+    daily_counts = {date: 0 for date in dates}
+    
+    for record in data:
+        created_date = record.get("created_at", "")[:10]
+        if created_date in daily_counts:
+            daily_counts[created_date] += 1
+    
+    fig = go.Figure(data=[
+        go.Scatter(
+            x=list(daily_counts.keys()),
+            y=list(daily_counts.values()),
+            mode='lines+markers',
+            line=dict(color='#3498db', width=2),
+            marker=dict(size=6),
+            fill='tozeroy',
+            fillcolor='rgba(52, 152, 219, 0.1)'
+        )
+    ])
+    
+    fig.update_layout(
+        title="Daily Activity (Last 30 Days)",
+        xaxis_title="Date",
+        yaxis_title="Records Created",
+        height=400,
+        showlegend=False
+    )
+    
+    return fig
 
 # Initialize session states
 if "file_uploader_key" not in st.session_state:
@@ -1190,322 +1304,498 @@ with tab_grid:
 
 with tab_unsigned:
     st.subheader("⚠️ Pending Actions")
-    st.caption("Forms awaiting your signature")
-
-    # Get all records that need user's signature
-    all_rows = sb.table(TABLE_NAME).select("*").neq("form_status", "complete").limit(500).execute().data or []
-
-    user_actionable = {}
-    total_pending = 0
+    st.markdown("Forms requiring your signature or attention")
     
-    for r in all_rows:
-        form_code_entry = r.get("form_code", "Unknown")
-        
-        # Skip if not in current form configs
-        if form_code_entry not in forms_lw and form_code_entry not in forms_mpr:
+    # Get all records that might need user's signature
+    try:
+        all_records = sb.table(TABLE_NAME).select("*").order("created_at", desc=True).execute().data or []
+    except Exception as e:
+        st.error(f"Error fetching records: {e}")
+        all_records = []
+    
+    pending_records = []
+    user_roles = current_user["roles"]
+    
+    for record in all_records:
+        form_config = forms_lw.get(record.get("form_code")) or forms_mpr.get(record.get("form_code"), {})
+        if not form_config:
             continue
             
-        entry_conf = forms_lw.get(form_code_entry) or forms_mpr.get(form_code_entry, {})
-        signatures = r.get("signatures", {})
-        signatures_config = entry_conf.get("signatures", {})
+        signatures = record.get("signatures", {})
+        signatures_config = form_config.get("signatures", {})
         
-        # Find signatures user can complete
-        actionable_sigs = []
+        # Check if user can sign any signature in this record
         for sig_name, sig_config in signatures_config.items():
-            if can_user_sign(form_code_entry, sig_name, current_user["roles"], signatures, entry_conf):
-                actionable_sigs.append(sig_name)
-        
-        if actionable_sigs:
-            if form_code_entry not in user_actionable:
-                user_actionable[form_code_entry] = []
-            
-            user_actionable[form_code_entry].append({
-                "id": r.get("id"),
-                "created_by": r.get("created_by", "Unknown"),
-                "created_at": r.get("created_at", "")[:10],
-                "priority": r.get("priority", "normal"),
-                "data": r.get("data", {}),
-                "actionable_sigs": actionable_sigs,
-                "all_signatures": signatures
-            })
-            total_pending += 1
-
-    if not user_actionable:
-        st.success("🎉 No pending signatures that require your action!")
+            if can_user_sign(record.get("form_code", ""), sig_name, user_roles, signatures, form_config):
+                pending_records.append({
+                    "record": record,
+                    "signature": sig_name,
+                    "form_config": form_config
+                })
+                break  # Only add record once even if multiple signatures pending
+    
+    if not pending_records:
+        st.info("🎉 No pending actions! All forms requiring your signature are complete.")
     else:
-        st.info(f"📋 Found **{total_pending}** entries requiring your signature across **{len(user_actionable)}** form types")
+        st.warning(f"📋 {len(pending_records)} forms require your attention")
         
-        # Priority sorting
-        for form_code_pending, entries in user_actionable.items():
-            entries.sort(key=lambda x: {"urgent": 0, "high": 1, "normal": 2}.get(x["priority"], 2))
-        
-        for form_code_pending, entries in user_actionable.items():
-            st.markdown(f"### 📌 {form_code_pending}")
+        for item in pending_records:
+            record = item["record"]
+            sig_name = item["signature"]
+            form_config = item["form_config"]
             
-            for e in entries:
-                priority_icon = {"normal": "🔵", "high": "🟠", "urgent": "🔴"}.get(e["priority"], "🔵")
+            with st.expander(f"🔔 **{record.get('form_code')}** — {record.get('created_at', '')[:10]} by {record.get('created_by', 'Unknown')}"):
+                col1, col2 = st.columns([2, 1])
                 
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div style="border:1px solid #ddd; border-radius:10px; padding:15px; margin-bottom:15px; background:#f8f9fa;">
-                            <h4>{priority_icon} {form_code_pending} — {e['created_at']} by {e['created_by']}</h4>
-                            <p><b>⚠️ You can sign:</b> {", ".join(e['actionable_sigs'])}</p>
-                            <p><b>Priority:</b> {e['priority'].title()}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                    # Show entry data in compact format
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        if e["data"]:
-                            df_compact = pd.DataFrame(list(e["data"].items())[:5], columns=["Field", "Value"])
-                            st.dataframe(df_compact, use_container_width=True)
+                with col1:
+                    # Show form data summary
+                    st.markdown("**📋 Form Data:**")
+                    data = record.get("data", {})
+                    for field, value in list(data.items())[:5]:  # Show first 5 fields
+                        st.caption(f"**{field}:** {str(value)[:100]}")
                     
-                    with col2:
-                        st.markdown("**Quick Actions:**")
-                        with st.form(f"quick_sign_{e['id']}"):
-                            sign_choices = {}
-                            comments = {}
+                    if len(data) > 5:
+                        st.caption(f"... and {len(data) - 5} more fields")
+                
+                with col2:
+                    st.markdown("**Required Signature:**")
+                    st.info(f"🖊️ {sig_name}")
+                    
+                    # Quick signature form
+                    with st.form(f"quick_sign_{record['id']}"):
+                        sign_comment = st.text_area("Signature Comment (optional)", height=60)
+                        sign_now = st.form_submit_button("✏️ Sign Now", type="primary")
+                    
+                    if sign_now:
+                        # Create signature entry
+                        new_signature = create_signature_entry(current_user, comment=sign_comment)
+                        
+                        # Update record with new signature
+                        updated_signatures = record.get("signatures", {}).copy()
+                        updated_signatures[sig_name] = new_signature
+                        
+                        # Update signature comments
+                        updated_comments = record.get("signature_comments", {}).copy()
+                        if sign_comment:
+                            updated_comments[sig_name] = sign_comment
+                        
+                        # Calculate new form status
+                        progress = get_form_signature_progress(updated_signatures, form_config)
+                        
+                        try:
+                            sb.table(TABLE_NAME).update({
+                                "signatures": updated_signatures,
+                                "signature_comments": updated_comments,
+                                "form_status": progress["status"],
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                                "updated_by": current_user["name"]
+                            }).eq("id", record["id"]).execute()
                             
-                            for sig in e['actionable_sigs']:
-                                sign_choices[sig] = st.checkbox(f"✍️ Sign as: **{sig}**")
-                                if sign_choices[sig]:
-                                    comments[sig] = st.text_input(f"Comment for {sig}", key=f"comment_quick_{e['id']}_{sig}")
+                            st.success(f"✅ Signed successfully!")
+                            st.info(f"📈 Form Status: {progress['status'].title()} ({progress['completed']}/{progress['total']} signatures)")
+                            st.rerun()
                             
-                            submit_quick = st.form_submit_button("✍️ Sign Selected", type="primary")
-                            
-                            if submit_quick:
-                                updated_signatures = e["all_signatures"].copy()
-                                signed_any = False
-                                
-                                for sig_name, should_sign in sign_choices.items():
-                                    if should_sign:
-                                        comment = comments.get(sig_name, "")
-                                        updated_signatures[sig_name] = create_signature_entry(current_user, comment=comment)
-                                        signed_any = True
-                                
-                                if signed_any:
-                                    # Calculate new status
-                                    entry_conf = forms_lw.get(form_code_pending) or forms_mpr.get(form_code_pending, {})
-                                    progress = get_form_signature_progress(updated_signatures, entry_conf)
-                                    
-                                    # Update database
-                                    sb.table(TABLE_NAME).update({
-                                        "signatures": updated_signatures,
-                                        "form_status": progress["status"],
-                                        "updated_at": datetime.now(timezone.utc).isoformat()
-                                    }).eq("id", e["id"]).execute()
-                                    
-                                    st.success("✅ Signatures added successfully!")
-                                    st.rerun()
-                                else:
-                                    st.warning("Please select at least one signature to sign")
+                        except Exception as e:
+                            st.error(f"Error signing form: {e}")
 
 with tab_dashboard:
-    st.subheader("📊 Dashboard & Analytics")
+    st.subheader("📊 System Dashboard")
+    st.markdown("Overview of all forms and records in the system")
     
-    # Get summary statistics
-    all_records = sb.table(TABLE_NAME).select("*").limit(1000).execute().data or []
+    # Get all system data
+    all_data = get_all_system_data()
     
-    if not all_records:
-        st.info("No data available for dashboard")
+    if not all_data:
+        st.warning("No data found in the system.")
     else:
-        # Overall statistics
+        # Summary metrics
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            total_forms = len(all_records)
-            st.metric("📄 Total Forms", total_forms)
+            st.metric("Total Records", len(all_data))
         
         with col2:
-            completed_forms = len([r for r in all_records if r.get("form_status") == "complete"])
-            st.metric("✅ Completed", completed_forms)
+            draft_count = len([r for r in all_data if r.get("form_status") == "draft"])
+            st.metric("Draft Forms", draft_count)
         
         with col3:
-            in_progress_forms = len([r for r in all_records if r.get("form_status") == "in_progress"])
-            st.metric("🟡 In Progress", in_progress_forms)
+            complete_count = len([r for r in all_data if r.get("form_status") == "complete"])
+            st.metric("Completed Forms", complete_count)
         
         with col4:
-            draft_forms = len([r for r in all_records if r.get("form_status") == "draft"])
-            st.metric("📝 Drafts", draft_forms)
+            urgent_count = len([r for r in all_data if r.get("priority") == "urgent"])
+            st.metric("Urgent Items", urgent_count)
         
         st.markdown("---")
         
-        # User-specific dashboard
-        st.markdown("### 👤 Your Activity")
-        user_records = [r for r in all_records if r.get("created_by_email") == current_user["email"]]
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Your Forms", len(user_records))
-        with col2:
-            your_completed = len([r for r in user_records if r.get("form_status") == "complete"])
-            st.metric("Your Completed", your_completed)
-        with col3:
-            your_pending = len([r for r in user_records if r.get("form_status") != "complete"])
-            st.metric("Your Pending", your_pending)
-        
-        # Charts and analysis
+        # Charts section
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("### 📊 Status Distribution")
-            status_counts = {}
-            for r in all_records:
-                status = r.get("form_status", "draft")
-                status_counts[status] = status_counts.get(status, 0) + 1
-            
-            if status_counts:
-                st.bar_chart(status_counts)
+            # Priority chart
+            priority_fig = create_priority_chart(all_data)
+            if priority_fig:
+                st.plotly_chart(priority_fig, use_container_width=True)
         
         with col2:
-            st.markdown("### 🎯 Priority Distribution")
-            priority_counts = {}
-            for r in all_records:
-                priority = r.get("priority", "normal")
-                priority_counts[priority] = priority_counts.get(priority, 0) + 1
-            
-            if priority_counts:
-                st.bar_chart(priority_counts)
+            # Status chart
+            status_fig = create_status_chart(all_data)
+            if status_fig:
+                st.plotly_chart(status_fig, use_container_width=True)
         
-        # Form type analysis
-        st.markdown("### 📋 Forms by Type")
-        form_type_stats = {}
-        for r in all_records:
-            form_code_stat = r.get("form_code", "Unknown")
-            if form_code_stat not in form_type_stats:
-                form_type_stats[form_code_stat] = {"total": 0, "complete": 0, "in_progress": 0, "draft": 0}
-            
-            form_type_stats[form_code_stat]["total"] += 1
-            status = r.get("form_status", "draft")
-            form_type_stats[form_code_stat][status] = form_type_stats[form_code_stat].get(status, 0) + 1
+        # Second row of charts
+        col1, col2 = st.columns(2)
         
-        if form_type_stats:
-            df_stats = pd.DataFrame.from_dict(form_type_stats, orient='index')
-            st.dataframe(df_stats, use_container_width=True)
+        with col1:
+            # Department chart
+            dept_fig = create_department_chart(all_data)
+            if dept_fig:
+                st.plotly_chart(dept_fig, use_container_width=True)
         
-        # Recent activity
-        st.markdown("### 🕒 Recent Activity")
-        recent_records = sorted(all_records, key=lambda x: x.get("created_at", ""), reverse=True)[:10]
+        with col2:
+            # Daily activity chart
+            activity_fig = create_daily_activity_chart(all_data)
+            if activity_fig:
+                st.plotly_chart(activity_fig, use_container_width=True)
         
-        for r in recent_records:
-            form_code_recent = r.get("form_code", "Unknown")
-            created_by = r.get("created_by", "Unknown")
-            created_at = r.get("created_at", "")[:16]
-            status = r.get("form_status", "draft")
-            priority = r.get("priority", "normal")
+        # Form type distribution (full width)
+        st.markdown("### Form Type Distribution")
+        form_fig = create_form_type_chart(all_data)
+        if form_fig:
+            st.plotly_chart(form_fig, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # Recent activity table
+        st.markdown("### Recent Activity (Last 10 Records)")
+        recent_data = all_data[:10]
+        
+        if recent_data:
+            recent_df_data = []
+            for record in recent_data:
+                recent_df_data.append({
+                    "ID": str(record.get("id", ""))[:8],
+                    "Form Code": record.get("form_code", "Unknown"),
+                    "Created": record.get("created_at", "")[:10],
+                    "Created By": record.get("created_by", "Unknown"),
+                    "Department": record.get("created_by_department", "Unknown"),
+                    "Status": record.get("form_status", "draft").title(),
+                    "Priority": record.get("priority", "normal").title()
+                })
             
-            status_icon = {"complete": "✅", "in_progress": "🟡", "draft": "📝"}.get(status, "📝")
-            priority_icon = {"urgent": "🔴", "high": "🟠", "normal": "🔵"}.get(priority, "🔵")
-            
-            st.markdown(f"{status_icon} {priority_icon} **{form_code_recent}** by {created_by} on {created_at}")
-
-        # Role-based statistics
-        if "ADMIN" in current_user["roles"]:
-            st.markdown("---")
-            st.markdown("### 🔑 Admin Analytics")
-            
-            # Department-wise breakdown
-            dept_stats = {}
-            for r in all_records:
-                dept = r.get("created_by_department", "Unknown")
-                if dept not in dept_stats:
-                    dept_stats[dept] = {"total": 0, "complete": 0}
-                dept_stats[dept]["total"] += 1
-                if r.get("form_status") == "complete":
-                    dept_stats[dept]["complete"] += 1
-            
-            if dept_stats:
-                df_dept = pd.DataFrame.from_dict(dept_stats, orient='index')
-                df_dept["completion_rate"] = ((df_dept["complete"] / df_dept["total"]) * 100).round(1)
-                st.dataframe(df_dept, use_container_width=True)
-
-        # Bulk Operations (Admin only)
-        if any(role in current_user["roles"] for role in user_config.get("authority_matrix", {}).get("can_delete_any", [])):
-            st.markdown("---")
-            st.markdown("### 🔧 Bulk Operations (Admin)")
-            
-            # Filter for bulk operations
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                bulk_status = st.selectbox("Status Filter", ["all", "draft", "in_progress", "complete"], key="bulk_status")
-            with col2:
-                bulk_priority = st.selectbox("Priority Filter", ["all", "normal", "high", "urgent"], key="bulk_priority")
-            with col3:
-                days_old = st.number_input("Older than (days)", min_value=0, value=30, key="bulk_days")
-            
-            # Get filtered records for bulk operations
-            bulk_query = sb.table(TABLE_NAME).select("*").order("created_at", desc=True)
-            
-            if bulk_status != "all":
-                bulk_query = bulk_query.eq("form_status", bulk_status)
-            if bulk_priority != "all":
-                bulk_query = bulk_query.eq("priority", bulk_priority)
-            
-            bulk_records = bulk_query.limit(200).execute().data or []
-            
-            # Filter by age
-            if days_old > 0:
-                cutoff_date = (datetime.now(timezone.utc) - pd.Timedelta(days=days_old)).isoformat()
-                bulk_records = [r for r in bulk_records if r.get("created_at", "") < cutoff_date]
-            
-            if bulk_records:
-                st.info(f"Found {len(bulk_records)} records matching criteria")
-                
-                # Show sample records
-                with st.expander("Preview Records"):
-                    for r in bulk_records[:5]:
-                        st.caption(f"• {r.get('form_code')} by {r.get('created_by')} on {r.get('created_at', '')[:10]} - {r.get('form_status', 'draft').title()}")
-                    if len(bulk_records) > 5:
-                        st.caption(f"... and {len(bulk_records) - 5} more")
-                
-                # Bulk delete with simple confirmation
-                if st.button("🗑️ Bulk Delete", type="secondary"):
-                    st.session_state.bulk_delete_confirm = True
-                
-                if st.session_state.get("bulk_delete_confirm", False):
-                    st.error("⚠️ **Confirm Bulk Deletion**")
-                    st.markdown(f"This will permanently delete **{len(bulk_records)}** records and all associated files.")
+            recent_df = pd.DataFrame(recent_df_data)
+            st.dataframe(recent_df, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # Export options
+        st.markdown("### Export System Data")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📥 Export All Records (CSV)", type="secondary"):
+                # Create comprehensive CSV
+                export_data = []
+                for record in all_data:
+                    row = {
+                        "ID": str(record.get("id", "")),
+                        "Form Code": record.get("form_code", ""),
+                        "File Type": record.get("file_type", ""),
+                        "Created": record.get("created_at", ""),
+                        "Created By": record.get("created_by", ""),
+                        "Department": record.get("created_by_department", ""),
+                        "Status": record.get("form_status", ""),
+                        "Priority": record.get("priority", ""),
+                        "Updated": record.get("updated_at", ""),
+                        "Files Count": len(record.get("file_metadata", []))
+                    }
                     
-                    col_confirm, col_cancel = st.columns(2)
-                    with col_confirm:
-                        if st.button("✅ Confirm Bulk Delete", type="primary"):
-                            # Perform bulk deletion
-                            deleted_count = 0
-                            failed_count = 0
-                            
-                            progress_bar = st.progress(0)
-                            status_text = st.empty()
-                            
-                            for i, record in enumerate(bulk_records):
-                                status_text.text(f"Deleting record {i+1}/{len(bulk_records)}")
-                                
-                                success = delete_record_with_files(record["id"], record.get("file_metadata", []))
-                                if success:
-                                    deleted_count += 1
-                                else:
-                                    failed_count += 1
-                                
-                                progress_bar.progress((i + 1) / len(bulk_records))
-                            
-                            status_text.empty()
-                            progress_bar.empty()
-                            
-                            if deleted_count > 0:
-                                st.success(f"✅ Successfully deleted {deleted_count} records")
-                            if failed_count > 0:
-                                st.error(f"❌ Failed to delete {failed_count} records")
-                            
-                            st.session_state.bulk_delete_confirm = False
-                            st.rerun()
+                    # Add form data fields
+                    data = record.get("data", {})
+                    for field, value in data.items():
+                        row[f"Data_{field}"] = str(value)
                     
-                    with col_cancel:
-                        if st.button("❌ Cancel", type="secondary"):
-                            st.session_state.bulk_delete_confirm = False
-                            st.rerun()
+                    # Add signature status
+                    signatures = record.get("signatures", {})
+                    for sig_name, sig_data in signatures.items():
+                        if isinstance(sig_data, dict) and sig_data.get("signed"):
+                            row[f"Sig_{sig_name}"] = f"✅ {sig_data.get('signed_by_name', 'Unknown')}"
+                        else:
+                            row[f"Sig_{sig_name}"] = "❌ Pending"
+                    
+                    export_data.append(row)
+                
+                if export_data:
+                    export_df = pd.DataFrame(export_data)
+                    csv_data = export_df.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        "⬇️ Download CSV",
+                        csv_data,
+                        file_name=f"ims_system_export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                        mime="text/csv"
+                    )
+        
+        with col2:
+            # Filter options for dashboard
+            st.markdown("**Filter Dashboard:**")
+            dashboard_status = st.multiselect(
+                "Status", 
+                ["draft", "in_progress", "complete"], 
+                default=["draft", "in_progress", "complete"],
+                key="dash_status"
+            )
+            dashboard_priority = st.multiselect(
+                "Priority", 
+                ["normal", "high", "urgent"], 
+                default=["normal", "high", "urgent"],
+                key="dash_priority"
+            )
+        
+        with col3:
+            st.markdown("**Quick Stats:**")
+            if dashboard_status and dashboard_priority:
+                filtered_data = [
+                    r for r in all_data 
+                    if r.get("form_status", "draft") in dashboard_status 
+                    and r.get("priority", "normal") in dashboard_priority
+                ]
+                st.info(f"Filtered: {len(filtered_data)} records")
+                
+                if filtered_data:
+                    avg_completion = sum(
+                        len([s for s in r.get("signatures", {}).values() 
+                             if isinstance(s, dict) and s.get("signed", False)]) 
+                        for r in filtered_data
+                    ) / len(filtered_data) if filtered_data else 0
+                    st.metric("Avg Signatures", f"{avg_completion:.1f}")
+
+# --------------------------
+# Report Generator (Enhanced for Dashboard)
+# --------------------------
+# Optional: try to use weasyprint for PDF output
+try:
+    from weasyprint import HTML, CSS
+    _WEASY = True
+except Exception:
+    _WEASY = False
+
+def _escape_html(s):
+    if s is None:
+        return ""
+    return (str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\n", "<br>"))
+
+def build_report_html(rows: List[Dict], report_title: str, show_compact: bool = True):
+    """
+    Build an HTML string for the report.
+    - rows: list of DB rows (dict)
+    - report_title: heading text
+    - show_compact: if True, produce landscape with compact table + stacked details
+    """
+    # Basic CSS: landscape if compact
+    page_css = "@page { size: A4 landscape; margin: 10mm; }" if show_compact else "@page { size: A4 portrait; margin: 12mm; }"
+    css = f"""
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #222; }}
+    h1 {{ text-align: center; font-size: 18px; margin-bottom: 8px; }}
+    .meta {{ font-size: 12px; color: #444; margin-bottom: 12px; }}
+    table.main {{ width: 100%; border-collapse: collapse; margin-bottom: 14px; }}
+    table.main th, table.main td {{ border: 1px solid #ddd; padding: 6px; font-size: 11px; }}
+    table.record-fields {{ width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }}
+    .fieldname {{ width: 28%; background:#f6f6f6; padding:6px; font-weight:600; vertical-align:top; }}
+    .fieldval {{ width: 72%; padding:6px; vertical-align:top; }}
+    .sign-row {{ padding:4px 0; font-size:12px; }}
+    .attachment {{ font-size:11px; color:#333; }}
+    {page_css}
+    """
+    title_html = f"<h1>{_escape_html(report_title)}</h1>"
+    
+    # Get all unique form codes to determine fields
+    form_codes = list(set(r.get("form_code") for r in rows))
+    all_forms = {**forms_lw, **forms_mpr}
+    
+    # Use fields from the first form or common fields
+    sample_fields = []
+    if form_codes:
+        sample_form = all_forms.get(form_codes[0], {})
+        sample_fields = sample_form.get("fields", [])[:3]  # First 3 fields
+    
+    # Compact table header
+    head_cols = ["ID", "Form", "Created", "Created By", "Status", "Priority"] + sample_fields
+    head_cells = "".join(f"<th>{_escape_html(c)}</th>" for c in head_cols)
+    
+    table_rows_html = ""
+    for r in rows:
+        d = r.get("data") or {}
+        # Basic info
+        basic = [
+            _escape_html(str(r.get("id",""))[:8]),
+            _escape_html(r.get("form_code", "")),
+            _escape_html(r.get("created_at","")[:10]),
+            _escape_html(r.get("created_by","")),
+            _escape_html(r.get("form_status","")),
+            _escape_html(r.get("priority","")),
+        ]
+        
+        # Add form-specific fields
+        for f in sample_fields:
+            v = d.get(f, "")
+            s = str(v)
+            if len(s) > 140:
+                s = s[:136] + "..."
+            basic.append(_escape_html(s))
+        
+        table_rows_html += "<tr>" + "".join(f"<td>{c}</td>" for c in basic) + "</tr>"
+
+    # Build details section
+    details_html = ""
+    for r in rows:
+        details_html += "<div class='record' style='margin-bottom:14px;'>"
+        details_html += f"<div class='meta'><b>{_escape_html(str(r.get('form_code','')))} — {_escape_html(str(r.get('id',''))[:8])}</b> &nbsp; Created: {_escape_html(r.get('created_at',''))} &nbsp; By: {_escape_html(r.get('created_by',''))}</div>"
+        
+        # Get form config for this record
+        form_config = all_forms.get(r.get("form_code"), {})
+        record_fields = form_config.get("fields", [])
+        
+        # Fields table
+        if record_fields:
+            details_html += "<table class='record-fields'>"
+            for f in record_fields:
+                v = r.get("data",{}).get(f,"")
+                details_html += f"<tr><td class='fieldname'>{_escape_html(f)}</td><td class='fieldval'>{_escape_html(v)}</td></tr>"
+            details_html += "</table>"
+        
+        # Signatures
+        details_html += "<div><b>Signatures</b><table style='width:100%;'>"
+        sigcfg = form_config.get("signatures", {})
+        current_sigs = r.get("signatures", {}) or {}
+        
+        for sname, scfg in (sigcfg.items() if isinstance(sigcfg, dict) else []):
+            sdata = current_sigs.get(sname, {})
+            if isinstance(sdata, dict) and sdata.get("signed", False):
+                who = _escape_html(sdata.get("signed_by_name",""))
+                dept = _escape_html(sdata.get("department",""))
+                when = _escape_html(sdata.get("signed_at","")[:16])
+                comment = _escape_html(sdata.get("comment",""))
+                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>✅ {who} ({dept}) — {when}"
+                if comment:
+                    details_html += f"<div style='font-size:11px;color:#333;margin-top:4px'>Comment: {comment}</div>"
+                details_html += "</td></tr>"
+            else:
+                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>❌ Pending</td></tr>"
+        details_html += "</table></div>"
+        
+        # Files
+        if r.get("file_metadata"):
+            details_html += "<div style='margin-top:8px;'><b>Attachments</b><ul>"
+            for fm in r.get("file_metadata", []):
+                details_html += f"<li class='attachment'>{_escape_html(fm.get('original_name'))} ({fm.get('file_size',0)} bytes)</li>"
+            details_html += "</ul></div>"
+
+        details_html += "</div><hr style='border:none;border-top:1px solid #eee;margin:10px 0;'>"
+
+    html = f"""
+    <html><head><meta charset='utf-8'><style>{css}</style></head>
+    <body>
+      {title_html}
+      <table class='main'>
+        <thead><tr>{head_cells}</tr></thead>
+        <tbody>{table_rows_html}</tbody>
+      </table>
+      {details_html}
+    </body></html>
+    """
+    return html
+
+# Add report generator in dashboard (dedented, top-level in module)
+st.markdown("---")
+st.markdown("### 📄 Generate System Report")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    report_status = st.multiselect(
+        "Include Status", 
+        ["draft", "in_progress", "complete"], 
+        default=["in_progress", "complete"],
+        key="report_status"
+    )
+
+with col2:
+    report_priority = st.multiselect(
+        "Include Priority", 
+        ["normal", "high", "urgent"], 
+        default=["normal", "high", "urgent"],
+        key="report_priority"
+    )
+
+with col3:
+    report_limit = st.number_input(
+        "Max records", 
+        min_value=1, 
+        max_value=1000, 
+        value=200,
+        key="report_limit"
+    )
+
+report_style = st.selectbox(
+    "Report layout", 
+    ["Compact (landscape)", "Detailed (portrait)"],
+    key="report_style"
+)
+
+# --- Replace the existing "Generate System Report" handler with this block ---
+
+if st.button("📊 Generate System Report", type="primary"):
+    # Ensure we have data available
+    try:
+        all_data_local = all_data if 'all_data' in locals() else get_all_system_data()
+    except Exception:
+        all_data_local = get_all_system_data()
+
+    filtered_data = [
+        r for r in all_data_local
+        if (r.get("form_status", "draft") in report_status)
+        and (r.get("priority", "normal") in report_priority)
+    ][:report_limit]
+
+    if not filtered_data:
+        st.warning("No records match the selected filters.")
+    else:
+        title = f"IMS System Report — {len(filtered_data)} records"
+        html = build_report_html(filtered_data, title, show_compact=(report_style.startswith("Compact")))
+
+        # Always offer the HTML download (previous behavior)
+        try:
+            html_bytes = html.encode("utf-8")
+            st.download_button(
+                "📥 Download HTML Report",
+                html_bytes,
+                file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                mime="text/html",
+                key="download_html_report"
+            )
+        except Exception as e:
+            st.warning(f"Could not prepare HTML download: {e}")
+
+        # If WeasyPrint is available, try to create a PDF and offer it too.
+        if _WEASY:
+            try:
+                pdf = HTML(string=html).write_pdf()
+                st.download_button(
+                    "📥 Download PDF Report",
+                    pdf,
+                    file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                    mime="application/pdf",
+                    key="download_pdf_report"
+                )
+                st.success("📊 System report PDF ready for download!")
+            except Exception as e:
+                st.warning(f"PDF generation failed: {e}. You can still download the HTML report.")
+        else:
+            st.info("WeasyPrint not available. Download HTML report and convert to PDF externally if needed.")
 
 # --------------------------
 # Footer
@@ -1513,8 +1803,8 @@ with tab_dashboard:
 st.markdown("---")
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.caption("IMS Enhanced v2.2")
+    st.caption("IMS Enhanced v2.3")
 with col2:
-    st.caption("Simplified Delete System")
+    st.caption("Complete Dashboard & Reporting System")
 with col3:
     st.caption(f"Logged in as: {current_user['name']}")
