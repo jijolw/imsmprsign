@@ -99,7 +99,8 @@
     "title": "Consumption of Natural Resources",
     "fields": [
       "Item",
-      "DBR/Chelan No & Date",
+      "DBR/Chelan No",
+      "DBR/Chelan  Date",
       "Received Qty",
       "Used Qty",
       "Date of Consumption",
@@ -117,26 +118,27 @@
     "retention_period": "3_years"
   },
   "LW4_05": {
-    "title": "Waste Generation & Disposal Record",
-    "fields": [
-      "Date",
-      "Type of Waste",
-      "Qty Generated",
-      "Qty Disposed",
-      "DS8 No. & Date",
-      "Date of Disposal",
-      "Balance for Disposal"
-    ],
-    "signatures": {
-      "Signed by SSE": {
-        "roles": ["SSE"],
-        "order": 1,
-        "depends_on": []
-      }
-    },
-    "priority_levels": ["normal"],
-    "retention_period": "5_years"
+  "title": "Waste Generation & Disposal Record",
+  "fields": [
+    "Date",                   
+    "Type of Waste",
+    "Qty Generated",
+    "Qty Disposed", 
+    "DS8 No",
+    "DS Date",             
+    "Date of Disposal",
+    "Balance for Disposal"
+  ],
+  "signatures": {
+    "Signed by SSE": {
+      "roles": ["SSE"], 
+      "order": 1,
+      "depends_on": []
+    }
   },
+  "priority_levels": ["normal"],
+  "retention_period": "5_years"
+},
   "LW4_06": {
     "title": "OH&S Complaints & Check-up Register",
     "fields": [

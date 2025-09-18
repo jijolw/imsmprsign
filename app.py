@@ -30,6 +30,500 @@ MAX_FILE_SIZE_MB = 50
 TABLE_NAME = "ims_entries_enhanced"
 
 # --------------------------
+# Enhanced Form Field Rendering
+# --------------------------
+def detect_composite_field(field_name: str) -> dict:
+    """
+    Detect if a field should be split into multiple inputs
+    Returns dict with split info or None if regular field
+    """
+    field_lower = field_name.lower()
+    
+    # Pattern 1: "Something no and date"
+    if " no and date" in field_lower or " number and date" in field_lower:
+        # Extract the prefix (e.g., "DS8" from "DS8 no and date")
+        prefix = field_name.split(" no and date")[0].split(" number and date")[0]
+        return {
+            "type": "number_and_date",
+            "prefix": prefix,
+            "parts": [
+                {"name": f"{prefix} Number", "type": "text", "placeholder": f"e.g., {prefix}/2024/001"},
+                {"name": "Date", "type": "date", "placeholder": "Select date"}
+            ],
+            "separator": " dated "
+        }
+    
+    # Pattern 2: "Reference and date" 
+    elif " ref and date" in field_lower or " reference and date" in field_lower:
+        return {
+            "type": "ref_and_date", 
+            "prefix": "Reference",
+            "parts": [
+                {"name": "Reference", "type": "text", "placeholder": "e.g., REF-2024-001"},
+                {"name": "Date", "type": "date", "placeholder": "Select date"}
+            ],
+            "separator": " - "
+        }
+    
+    # Pattern 3: "Code and date"
+    elif " code and date" in field_lower:
+        prefix = field_name.split(" code and date")[0]
+        return {
+            "type": "code_and_date",
+            "prefix": prefix, 
+            "parts": [
+                {"name": f"{prefix} Code", "type": "text", "placeholder": f"e.g., {prefix}-001"},
+                {"name": "Date", "type": "date", "placeholder": "Select date"}
+            ],
+            "separator": " dated "
+        }
+    
+    return None
+
+def parse_composite_value(value: str, field_info: dict) -> tuple:
+    """
+    Parse a composite value back into its parts
+    Returns (part1_value, part2_value)
+    """
+    if not value or not field_info:
+        return ("", "")
+    
+    separator = field_info.get("separator", " dated ")
+    
+    # Try different common separators if the configured one doesn't work
+    separators_to_try = [
+        separator,
+        " dated ",
+        " - ",
+        " on ",
+        " dt ",
+        ","
+    ]
+    
+    for sep in separators_to_try:
+        if sep in value:
+            parts = value.split(sep, 1)
+            if len(parts) == 2:
+                return (parts[0].strip(), parts[1].strip())
+    
+    # If no separator found, assume it's just the first part
+    return (value.strip(), "")
+
+def merge_composite_values(part1: str, part2: str, field_info: dict) -> str:
+    """
+    Merge two parts into a single composite value
+    """
+    if not part1 and not part2:
+        return ""
+    
+    separator = field_info.get("separator", " dated ")
+    
+    if part1 and part2:
+        return f"{part1.strip()}{separator}{part2.strip()}"
+    elif part1:
+        return part1.strip()
+    elif part2:
+        return f"(No reference){separator}{part2.strip()}"
+    
+    return ""
+
+def render_form_fields(fields, values_dict=None, cols=2):
+    """Enhanced form field rendering with composite field support"""
+    if values_dict is None:
+        values_dict = {}
+    
+    values = {}
+    cols_layout = st.columns(cols)
+    field_index = 0
+    
+    for fld in fields:
+        # Check if this is a composite field
+        composite_info = detect_composite_field(fld)
+        
+        with cols_layout[field_index % cols]:
+            current_value = values_dict.get(fld, "")
+            
+            if composite_info:
+                # Handle composite field with split inputs
+                st.markdown(f"**{fld}**")
+                
+                # Parse existing value if any
+                part1_value, part2_value = parse_composite_value(current_value, composite_info)
+                
+                # Create input fields for each part
+                part_values = []
+                for i, part_info in enumerate(composite_info["parts"]):
+                    part_name = part_info["name"]
+                    part_type = part_info["type"]
+                    placeholder = part_info["placeholder"]
+                    
+                    # Use existing parsed values
+                    existing_val = part1_value if i == 0 else part2_value
+                    
+                    if part_type == "date":
+                        if existing_val:
+                            try:
+                                # Try to parse existing date value
+                                if len(existing_val) == 10 and existing_val.count('-') == 2:
+                                    parsed_date = datetime.fromisoformat(existing_val).date()
+                                elif len(existing_val.replace('-', '').replace('/', '').replace('.', '')) == 8:
+                                    # Handle different date formats
+                                    from datetime import datetime as dt
+                                    for fmt in ['%d-%m-%Y', '%d/%m/%Y', '%d.%m.%Y', '%Y-%m-%d']:
+                                        try:
+                                            parsed_date = dt.strptime(existing_val, fmt).date()
+                                            break
+                                        except:
+                                            continue
+                                    else:
+                                        parsed_date = None
+                                else:
+                                    parsed_date = None
+                            except:
+                                parsed_date = None
+                        else:
+                            parsed_date = None
+                            
+                        date_val = st.date_input(
+                            part_name,
+                            value=parsed_date,
+                            key=f"{fld}_part_{i}",
+                            help=placeholder
+                        )
+                        part_values.append(date_val.isoformat() if date_val else "")
+                    else:
+                        text_val = st.text_input(
+                            part_name,
+                            value=existing_val,
+                            placeholder=placeholder,
+                            key=f"{fld}_part_{i}"
+                        )
+                        part_values.append(text_val)
+                
+                # Merge the parts into final value
+                merged_value = merge_composite_values(
+                    part_values[0] if len(part_values) > 0 else "",
+                    part_values[1] if len(part_values) > 1 else "",
+                    composite_info
+                )
+                values[fld] = merged_value
+                
+                # Show preview of merged value
+                if merged_value:
+                    st.caption(f"Combined: {merged_value}")
+                
+            else:
+                # Handle regular fields (existing logic)
+                field_lower = fld.lower()
+                is_pure_date_field = (
+                    any(date_keyword in field_lower for date_keyword in ['date', 'deadline', 'due', 'scheduled', 'planned']) and
+                    not any(exclude_keyword in field_lower for exclude_keyword in ['no', 'number', 'ref', 'reference', 'code']) and
+                    not any(char.isdigit() for char in field_lower)
+                )
+                
+                is_long = any(k in field_lower for k in ["remarks", "details", "description", "action", "cause", "reason", "comment"])
+                
+                if is_pure_date_field:
+                    # Use date input for pure date fields
+                    if current_value and isinstance(current_value, str):
+                        try:
+                            if len(current_value) == 10 and current_value.count('-') == 2:
+                                parsed_date = datetime.fromisoformat(current_value).date()
+                            else:
+                                parsed_date = datetime.fromisoformat(current_value.replace('Z', '+00:00')).date()
+                            values[fld] = st.date_input(fld, value=parsed_date)
+                        except:
+                            values[fld] = st.date_input(fld, value=None)
+                    else:
+                        values[fld] = st.date_input(fld, value=None)
+                        
+                    # Convert date back to string for storage
+                    if values[fld]:
+                        values[fld] = values[fld].isoformat()
+                    else:
+                        values[fld] = ""
+                        
+                elif is_long:
+                    values[fld] = st.text_area(fld, value=current_value, height=100)
+                else:
+                    values[fld] = st.text_input(fld, value=current_value)
+        
+        field_index += 1
+    
+    return values
+
+def display_composite_field_readonly(field_name: str, value: str) -> str:
+    """
+    Format composite field values for display in read-only contexts
+    """
+    composite_info = detect_composite_field(field_name)
+    
+    if not composite_info or not value:
+        return value
+    
+    # Parse and reformat for better display
+    part1, part2 = parse_composite_value(value, composite_info)
+    
+    if part1 and part2:
+        # Try to format date part if it looks like a date
+        formatted_date = part2
+        try:
+            if len(part2) == 10 and part2.count('-') == 2:
+                date_obj = datetime.fromisoformat(part2).date()
+                formatted_date = date_obj.strftime('%d-%b-%Y')
+        except:
+            pass
+        
+        return f"**{part1}** dated **{formatted_date}**"
+    
+    return value
+
+# --------------------------
+# Individual Record Download Functions
+# --------------------------
+def _escape_html(s):
+    if s is None:
+        return ""
+    return (str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\n", "<br>"))
+
+def build_single_record_report_html(record: Dict, form_config: Dict):
+    """Build HTML report for a single record"""
+    
+    # Basic CSS for single record report
+    css = """
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #222; line-height: 1.4; }
+    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+    .form-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    .record-id { font-size: 14px; color: #666; }
+    .section { margin: 20px 0; }
+    .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    .info-grid { display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-bottom: 15px; }
+    .info-label { font-weight: 600; color: #555; }
+    .fields-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    .fields-table th { background: #f5f5f5; padding: 10px; text-align: left; border: 1px solid #ddd; font-weight: 600; }
+    .fields-table td { padding: 10px; border: 1px solid #ddd; vertical-align: top; }
+    .signature-item { margin: 10px 0; padding: 10px; border-left: 4px solid #e74c3c; background: #f9f9f9; }
+    .signature-item.signed { border-left-color: #2ecc71; }
+    .signature-name { font-weight: 600; margin-bottom: 5px; }
+    .signature-details { font-size: 12px; color: #666; }
+    .file-item { margin: 5px 0; padding: 8px; background: #f8f9fa; border-radius: 4px; }
+    .priority-high { color: #f39c12; }
+    .priority-urgent { color: #e74c3c; }
+    .status-complete { color: #2ecc71; }
+    .status-progress { color: #f39c12; }
+    .status-draft { color: #95a5a6; }
+    """
+    
+    form_code = record.get('form_code', 'Unknown')
+    record_id = str(record.get('id', ''))[:8]
+    
+    # Header section
+    header_html = f"""
+    <div class='header'>
+        <div class='form-title'>{_escape_html(form_config.get('title', form_code))}</div>
+        <div class='record-id'>Record ID: {_escape_html(record_id)}</div>
+    </div>
+    """
+    
+    # Record information section
+    created_at = record.get('created_at', '')
+    if created_at:
+        created_at = created_at[:19].replace('T', ' ')
+    
+    priority = record.get('priority', 'normal')
+    priority_class = f'priority-{priority}' if priority in ['high', 'urgent'] else ''
+    
+    status = record.get('form_status', 'draft')
+    status_class = f'status-{status.replace("_", "")}'
+    
+    info_html = f"""
+    <div class='section'>
+        <div class='section-title'>Record Information</div>
+        <div class='info-grid'>
+            <div class='info-label'>Form Code:</div>
+            <div>{_escape_html(form_code)}</div>
+            
+            <div class='info-label'>Created By:</div>
+            <div>{_escape_html(record.get('created_by', 'Unknown'))}</div>
+            
+            <div class='info-label'>Department:</div>
+            <div>{_escape_html(record.get('created_by_department', 'Unknown'))}</div>
+            
+            <div class='info-label'>Created On:</div>
+            <div>{_escape_html(created_at)}</div>
+            
+            <div class='info-label'>Priority:</div>
+            <div class='{priority_class}'>{_escape_html(priority.title())}</div>
+            
+            <div class='info-label'>Status:</div>
+            <div class='{status_class}'>{_escape_html(status.replace('_', ' ').title())}</div>
+        </div>
+    </div>
+    """
+    
+    # Form data section
+    form_data = record.get('data', {})
+    fields_html = ""
+    if form_data:
+        fields_html = """
+        <div class='section'>
+            <div class='section-title'>Form Data</div>
+            <table class='fields-table'>
+                <thead>
+                    <tr><th style='width: 30%;'>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+        """
+        
+        for field, value in form_data.items():
+            fields_html += f"""
+                <tr>
+                    <td>{_escape_html(field)}</td>
+                    <td>{_escape_html(str(value))}</td>
+                </tr>
+            """
+        
+        fields_html += "</tbody></table></div>"
+    
+    # Signatures section
+    signatures = record.get('signatures', {})
+    signatures_config = form_config.get('signatures', {})
+    signatures_html = ""
+    
+    if signatures_config:
+        signatures_html = """
+        <div class='section'>
+            <div class='section-title'>Signature Status</div>
+        """
+        
+        for sig_name, sig_config in signatures_config.items():
+            sig_data = signatures.get(sig_name, {})
+            
+            if isinstance(sig_data, dict) and sig_data.get('signed', False):
+                # Signed
+                signed_by = sig_data.get('signed_by_name', 'Unknown')
+                department = sig_data.get('department', '')
+                signed_at = sig_data.get('signed_at', '')[:19].replace('T', ' ')
+                comment = sig_data.get('comment', '')
+                
+                signatures_html += f"""
+                <div class='signature-item signed'>
+                    <div class='signature-name'>✅ {_escape_html(sig_name)}</div>
+                    <div class='signature-details'>
+                        Signed by: {_escape_html(signed_by)} ({_escape_html(department)})<br>
+                        Date: {_escape_html(signed_at)}
+                        {f"<br>Comment: {_escape_html(comment)}" if comment else ""}
+                    </div>
+                </div>
+                """
+            else:
+                # Pending
+                required_roles = sig_config.get('roles', [])
+                signatures_html += f"""
+                <div class='signature-item'>
+                    <div class='signature-name'>❌ {_escape_html(sig_name)}</div>
+                    <div class='signature-details'>
+                        Status: Pending<br>
+                        Required roles: {_escape_html(', '.join(required_roles))}
+                    </div>
+                </div>
+                """
+        
+        signatures_html += "</div>"
+    
+    # Files section
+    files_html = ""
+    file_metadata = record.get('file_metadata', [])
+    if file_metadata:
+        files_html = """
+        <div class='section'>
+            <div class='section-title'>Attached Files</div>
+        """
+        
+        for file_meta in file_metadata:
+            file_name = file_meta.get('original_name', 'Unknown')
+            file_size = file_meta.get('file_size', 0)
+            uploaded_at = file_meta.get('uploaded_at', '')[:19].replace('T', ' ')
+            
+            files_html += f"""
+            <div class='file-item'>
+                📎 <strong>{_escape_html(file_name)}</strong><br>
+                Size: {file_size:,} bytes | Uploaded: {_escape_html(uploaded_at)}
+            </div>
+            """
+        
+        files_html += "</div>"
+    
+    # Combine all sections
+    html = f"""
+    <html>
+    <head>
+        <meta charset='utf-8'>
+        <style>{css}</style>
+    </head>
+    <body>
+        {header_html}
+        {info_html}
+        {fields_html}
+        {signatures_html}
+        {files_html}
+        
+        <div class='section' style='margin-top: 40px; font-size: 12px; color: #666; text-align: center;'>
+            Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} by IMS Enhanced System
+        </div>
+    </body></html>
+    """
+    
+    return html
+
+def download_single_record(record: Dict, form_config: Dict):
+    """Generate download options for a single record"""
+    
+    form_code = record.get('form_code', 'Unknown')
+    record_id = str(record.get('id', ''))[:8]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+    
+    # Generate HTML report
+    html_content = build_single_record_report_html(record, form_config)
+    
+    col1, col2 = st.columns(2)
+    
+    # HTML Download
+    with col1:
+        html_bytes = html_content.encode('utf-8')
+        st.download_button(
+            "📄 Download HTML",
+            html_bytes,
+            file_name=f"{form_code}_{record_id}_{timestamp}.html",
+            mime="text/html",
+            key=f"html_download_{record['id']}",
+            use_container_width=True
+        )
+    
+    # PDF Download (if WeasyPrint available)
+    with col2:
+        try:
+            from weasyprint import HTML as WeasyHTML
+            pdf_bytes = WeasyHTML(string=html_content).write_pdf()
+            st.download_button(
+                "📋 Download PDF",
+                pdf_bytes,
+                file_name=f"{form_code}_{record_id}_{timestamp}.pdf",
+                mime="application/pdf",
+                key=f"pdf_download_{record['id']}",
+                use_container_width=True
+            )
+        except ImportError:
+            st.info("PDF not available (WeasyPrint not installed)", icon="ℹ️")
+        except Exception as e:
+            st.error(f"PDF generation failed: {e}")
+
+# --------------------------
 # Role-based Access Control
 # --------------------------
 def get_user_permissions(user_roles: List[str], user_config: Dict, form_code: str = None, form_config: Dict = None) -> Dict[str, bool]:
@@ -523,19 +1017,7 @@ def render_edit_form(record: Dict, form_config: Dict, user_info: Dict):
         current_data = record.get("data", {})
         
         st.markdown("### 📋 Form Data")
-        values = {}
-        
-        # Arrange fields in columns
-        num_cols = 2
-        cols = st.columns(num_cols)
-        for i, fld in enumerate(fields):
-            with cols[i % num_cols]:
-                current_value = current_data.get(fld, "")
-                is_long = any(k in fld.lower() for k in ["remarks", "details", "description", "action", "cause"])
-                if is_long:
-                    values[fld] = st.text_area(fld, value=current_value, height=100)
-                else:
-                    values[fld] = st.text_input(fld, value=current_value)
+        values = render_form_fields(fields, current_data)
         
         st.markdown("---")
         
@@ -874,6 +1356,130 @@ def create_daily_activity_chart(data):
     
     return fig
 
+# --------------------------
+# Report Generator (Enhanced for Dashboard)
+# --------------------------
+def build_report_html(rows: List[Dict], report_title: str, show_compact: bool = True):
+    """
+    Build an HTML string for the report.
+    - rows: list of DB rows (dict)
+    - report_title: heading text
+    - show_compact: if True, produce landscape with compact table + stacked details
+    """
+    # Basic CSS: landscape if compact
+    page_css = "@page { size: A4 landscape; margin: 10mm; }" if show_compact else "@page { size: A4 portrait; margin: 12mm; }"
+    css = f"""
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #222; }}
+    h1 {{ text-align: center; font-size: 18px; margin-bottom: 8px; }}
+    .meta {{ font-size: 12px; color: #444; margin-bottom: 12px; }}
+    table.main {{ width: 100%; border-collapse: collapse; margin-bottom: 14px; }}
+    table.main th, table.main td {{ border: 1px solid #ddd; padding: 6px; font-size: 11px; }}
+    table.record-fields {{ width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }}
+    .fieldname {{ width: 28%; background:#f6f6f6; padding:6px; font-weight:600; vertical-align:top; }}
+    .fieldval {{ width: 72%; padding:6px; vertical-align:top; }}
+    .sign-row {{ padding:4px 0; font-size:12px; }}
+    .attachment {{ font-size:11px; color:#333; }}
+    {page_css}
+    """
+    title_html = f"<h1>{_escape_html(report_title)}</h1>"
+    
+    # Get all unique form codes to determine fields
+    form_codes = list(set(r.get("form_code") for r in rows))
+    all_forms = {**load_json("form_configs_enhanced.json"), **load_json("forms_mpr_configs_enhanced.json")}
+    
+    # Use fields from the first form or common fields
+    sample_fields = []
+    if form_codes:
+        sample_form = all_forms.get(form_codes[0], {})
+        sample_fields = sample_form.get("fields", [])[:3]  # First 3 fields
+    
+    # Compact table header
+    head_cols = ["ID", "Form", "Created", "Created By", "Status", "Priority"] + sample_fields
+    head_cells = "".join(f"<th>{_escape_html(c)}</th>" for c in head_cols)
+    
+    table_rows_html = ""
+    for r in rows:
+        d = r.get("data") or {}
+        # Basic info
+        basic = [
+            _escape_html(str(r.get("id",""))[:8]),
+            _escape_html(r.get("form_code", "")),
+            _escape_html(r.get("created_at","")[:10]),
+            _escape_html(r.get("created_by","")),
+            _escape_html(r.get("form_status","")),
+            _escape_html(r.get("priority","")),
+        ]
+        
+        # Add form-specific fields
+        for f in sample_fields:
+            v = d.get(f, "")
+            s = str(v)
+            if len(s) > 140:
+                s = s[:136] + "..."
+            basic.append(_escape_html(s))
+        
+        table_rows_html += "<tr>" + "".join(f"<td>{c}</td>" for c in basic) + "</tr>"
+
+    # Build details section
+    details_html = ""
+    for r in rows:
+        details_html += "<div class='record' style='margin-bottom:14px;'>"
+        details_html += f"<div class='meta'><b>{_escape_html(str(r.get('form_code','')))} — {_escape_html(str(r.get('id',''))[:8])}</b> &nbsp; Created: {_escape_html(r.get('created_at',''))} &nbsp; By: {_escape_html(r.get('created_by',''))}</div>"
+        
+        # Get form config for this record
+        form_config = all_forms.get(r.get("form_code"), {})
+        record_fields = form_config.get("fields", [])
+        
+        # Fields table
+        if record_fields:
+            details_html += "<table class='record-fields'>"
+            for f in record_fields:
+                v = r.get("data",{}).get(f,"")
+                details_html += f"<tr><td class='fieldname'>{_escape_html(f)}</td><td class='fieldval'>{_escape_html(v)}</td></tr>"
+            details_html += "</table>"
+        
+        # Signatures
+        details_html += "<div><b>Signatures</b><table style='width:100%;'>"
+        sigcfg = form_config.get("signatures", {})
+        current_sigs = r.get("signatures", {}) or {}
+        
+        for sname, scfg in (sigcfg.items() if isinstance(sigcfg, dict) else []):
+            sdata = current_sigs.get(sname, {})
+            if isinstance(sdata, dict) and sdata.get("signed", False):
+                who = _escape_html(sdata.get("signed_by_name",""))
+                dept = _escape_html(sdata.get("department",""))
+                when = _escape_html(sdata.get("signed_at","")[:16])
+                comment = _escape_html(sdata.get("comment",""))
+                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>✅ {who} ({dept}) — {when}"
+                if comment:
+                    details_html += f"<div style='font-size:11px;color:#333;margin-top:4px'>Comment: {comment}</div>"
+                details_html += "</td></tr>"
+            else:
+                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>❌ Pending</td></tr>"
+        details_html += "</table></div>"
+        
+        # Files
+        if r.get("file_metadata"):
+            details_html += "<div style='margin-top:8px;'><b>Attachments</b><ul>"
+            for fm in r.get("file_metadata", []):
+                details_html += f"<li class='attachment'>{_escape_html(fm.get('original_name'))} ({fm.get('file_size',0)} bytes)</li>"
+            details_html += "</ul></div>"
+
+        details_html += "</div><hr style='border:none;border-top:1px solid #eee;margin:10px 0;'>"
+
+    html = f"""
+    <html><head><meta charset='utf-8'><style>{css}</style></head>
+    <body>
+      {title_html}
+      <table class='main'>
+        <thead><tr>{head_cells}</tr></thead>
+        <tbody>{table_rows_html}</tbody>
+      </table>
+      {details_html}
+    </body></html>
+    """
+    return html
+
 # Initialize session states
 if "file_uploader_key" not in st.session_state:
     st.session_state.file_uploader_key = 0
@@ -976,18 +1582,7 @@ with tab_entry:
 
         with st.form("entry_form"):
             st.markdown("### 📋 Form Data")
-            values = {}
-            
-            # Arrange fields in columns
-            num_cols = 2
-            cols = st.columns(num_cols)
-            for i, fld in enumerate(fields):
-                with cols[i % num_cols]:
-                    is_long = any(k in fld.lower() for k in ["remarks","details","description","action","cause"])
-                    if is_long:
-                        values[fld] = st.text_area(fld, height=100)
-                    else:
-                        values[fld] = st.text_input(fld)
+            values = render_form_fields(fields)
 
             st.markdown("---")
 
@@ -1225,7 +1820,12 @@ with tab_grid:
                         st.caption(f"**Progress:** {progress['completed']}/{progress['total']} signatures")
                         st.caption(f"**Department:** {r.get('created_by_department', 'Unknown')}")
                         
-                        # Simplified Action buttons for individual records
+                        # Download section
+                        st.markdown("**📥 Download:**")
+                        form_config = forms_lw.get(r.get('form_code')) or forms_mpr.get(r.get('form_code'), {})
+                        download_single_record(r, form_config)
+                        
+                        # Action buttons for individual records
                         st.markdown("**Actions:**")
                         
                         if can_edit:
@@ -1488,56 +2088,62 @@ with tab_dashboard:
         
         st.markdown("---")
         
-        # Export options
+        # Export options - Form-specific
         st.markdown("### Export System Data")
+        
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("📥 Export All Records (CSV)", type="secondary"):
-                # Create comprehensive CSV
-                export_data = []
-                for record in all_data:
-                    row = {
-                        "ID": str(record.get("id", "")),
-                        "Form Code": record.get("form_code", ""),
-                        "File Type": record.get("file_type", ""),
-                        "Created": record.get("created_at", ""),
-                        "Created By": record.get("created_by", ""),
-                        "Department": record.get("created_by_department", ""),
-                        "Status": record.get("form_status", ""),
-                        "Priority": record.get("priority", ""),
-                        "Updated": record.get("updated_at", ""),
-                        "Files Count": len(record.get("file_metadata", []))
-                    }
-                    
-                    # Add form data fields
-                    data = record.get("data", {})
-                    for field, value in data.items():
-                        row[f"Data_{field}"] = str(value)
-                    
-                    # Add signature status
-                    signatures = record.get("signatures", {})
-                    for sig_name, sig_data in signatures.items():
-                        if isinstance(sig_data, dict) and sig_data.get("signed"):
-                            row[f"Sig_{sig_name}"] = f"✅ {sig_data.get('signed_by_name', 'Unknown')}"
-                        else:
-                            row[f"Sig_{sig_name}"] = "❌ Pending"
-                    
-                    export_data.append(row)
+            st.markdown("**Export by Form:**")
+            all_form_codes = list(set(r.get("form_code", "Unknown") for r in all_data))
+            export_form = st.selectbox(
+                "Select Form to Export",
+                ["All Forms"] + all_form_codes,
+                key="export_form_select"
+            )
+            
+            if st.button("📥 Export Selected Forms", type="secondary"):
+                if export_form == "All Forms":
+                    filtered_data = all_data
+                    title_suffix = "All Forms"
+                else:
+                    filtered_data = [r for r in all_data if r.get('form_code') == export_form]
+                    title_suffix = export_form
                 
-                if export_data:
-                    export_df = pd.DataFrame(export_data)
-                    csv_data = export_df.to_csv(index=False).encode("utf-8")
+                if not filtered_data:
+                    st.warning("No records found for selected form.")
+                else:
+                    title = f"IMS Report - {title_suffix} ({len(filtered_data)} records)"
+                    html = build_report_html(filtered_data, title, show_compact=True)
+                    
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+                    
+                    # HTML download
+                    html_bytes = html.encode("utf-8")
                     st.download_button(
-                        "⬇️ Download CSV",
-                        csv_data,
-                        file_name=f"ims_system_export_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                        mime="text/csv"
+                        "⬇️ Download HTML Report",
+                        html_bytes,
+                        file_name=f"ims_report_{export_form.replace(' ', '_')}_{timestamp}.html",
+                        mime="text/html"
                     )
-        
+                    
+                    # PDF download if available
+                    try:
+                        from weasyprint import HTML as WeasyHTML
+                        pdf = WeasyHTML(string=html).write_pdf()
+                        st.download_button(
+                            "⬇️ Download PDF Report",
+                            pdf,
+                            file_name=f"ims_report_{export_form.replace(' ', '_')}_{timestamp}.pdf",
+                            mime="application/pdf"
+                        )
+                    except ImportError:
+                        st.info("PDF not available (WeasyPrint not installed)")
+                    except Exception as e:
+                        st.warning(f"PDF generation failed: {e}")
+
         with col2:
-            # Filter options for dashboard
-            st.markdown("**Filter Dashboard:**")
+            st.markdown("**Filter Options:**")
             dashboard_status = st.multiselect(
                 "Status", 
                 ["draft", "in_progress", "complete"], 
@@ -1569,233 +2175,85 @@ with tab_dashboard:
                     ) / len(filtered_data) if filtered_data else 0
                     st.metric("Avg Signatures", f"{avg_completion:.1f}")
 
-# --------------------------
-# Report Generator (Enhanced for Dashboard)
-# --------------------------
-# Optional: try to use weasyprint for PDF output
-try:
-    from weasyprint import HTML, CSS
-    _WEASY = True
-except Exception:
-    _WEASY = False
+        # Report generator section
+        st.markdown("---")
+        st.markdown("### 📄 Generate System Report")
 
-def _escape_html(s):
-    if s is None:
-        return ""
-    return (str(s)
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\n", "<br>"))
+        col1, col2, col3 = st.columns(3)
 
-def build_report_html(rows: List[Dict], report_title: str, show_compact: bool = True):
-    """
-    Build an HTML string for the report.
-    - rows: list of DB rows (dict)
-    - report_title: heading text
-    - show_compact: if True, produce landscape with compact table + stacked details
-    """
-    # Basic CSS: landscape if compact
-    page_css = "@page { size: A4 landscape; margin: 10mm; }" if show_compact else "@page { size: A4 portrait; margin: 12mm; }"
-    css = f"""
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #222; }}
-    h1 {{ text-align: center; font-size: 18px; margin-bottom: 8px; }}
-    .meta {{ font-size: 12px; color: #444; margin-bottom: 12px; }}
-    table.main {{ width: 100%; border-collapse: collapse; margin-bottom: 14px; }}
-    table.main th, table.main td {{ border: 1px solid #ddd; padding: 6px; font-size: 11px; }}
-    table.record-fields {{ width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }}
-    .fieldname {{ width: 28%; background:#f6f6f6; padding:6px; font-weight:600; vertical-align:top; }}
-    .fieldval {{ width: 72%; padding:6px; vertical-align:top; }}
-    .sign-row {{ padding:4px 0; font-size:12px; }}
-    .attachment {{ font-size:11px; color:#333; }}
-    {page_css}
-    """
-    title_html = f"<h1>{_escape_html(report_title)}</h1>"
-    
-    # Get all unique form codes to determine fields
-    form_codes = list(set(r.get("form_code") for r in rows))
-    all_forms = {**forms_lw, **forms_mpr}
-    
-    # Use fields from the first form or common fields
-    sample_fields = []
-    if form_codes:
-        sample_form = all_forms.get(form_codes[0], {})
-        sample_fields = sample_form.get("fields", [])[:3]  # First 3 fields
-    
-    # Compact table header
-    head_cols = ["ID", "Form", "Created", "Created By", "Status", "Priority"] + sample_fields
-    head_cells = "".join(f"<th>{_escape_html(c)}</th>" for c in head_cols)
-    
-    table_rows_html = ""
-    for r in rows:
-        d = r.get("data") or {}
-        # Basic info
-        basic = [
-            _escape_html(str(r.get("id",""))[:8]),
-            _escape_html(r.get("form_code", "")),
-            _escape_html(r.get("created_at","")[:10]),
-            _escape_html(r.get("created_by","")),
-            _escape_html(r.get("form_status","")),
-            _escape_html(r.get("priority","")),
-        ]
-        
-        # Add form-specific fields
-        for f in sample_fields:
-            v = d.get(f, "")
-            s = str(v)
-            if len(s) > 140:
-                s = s[:136] + "..."
-            basic.append(_escape_html(s))
-        
-        table_rows_html += "<tr>" + "".join(f"<td>{c}</td>" for c in basic) + "</tr>"
-
-    # Build details section
-    details_html = ""
-    for r in rows:
-        details_html += "<div class='record' style='margin-bottom:14px;'>"
-        details_html += f"<div class='meta'><b>{_escape_html(str(r.get('form_code','')))} — {_escape_html(str(r.get('id',''))[:8])}</b> &nbsp; Created: {_escape_html(r.get('created_at',''))} &nbsp; By: {_escape_html(r.get('created_by',''))}</div>"
-        
-        # Get form config for this record
-        form_config = all_forms.get(r.get("form_code"), {})
-        record_fields = form_config.get("fields", [])
-        
-        # Fields table
-        if record_fields:
-            details_html += "<table class='record-fields'>"
-            for f in record_fields:
-                v = r.get("data",{}).get(f,"")
-                details_html += f"<tr><td class='fieldname'>{_escape_html(f)}</td><td class='fieldval'>{_escape_html(v)}</td></tr>"
-            details_html += "</table>"
-        
-        # Signatures
-        details_html += "<div><b>Signatures</b><table style='width:100%;'>"
-        sigcfg = form_config.get("signatures", {})
-        current_sigs = r.get("signatures", {}) or {}
-        
-        for sname, scfg in (sigcfg.items() if isinstance(sigcfg, dict) else []):
-            sdata = current_sigs.get(sname, {})
-            if isinstance(sdata, dict) and sdata.get("signed", False):
-                who = _escape_html(sdata.get("signed_by_name",""))
-                dept = _escape_html(sdata.get("department",""))
-                when = _escape_html(sdata.get("signed_at","")[:16])
-                comment = _escape_html(sdata.get("comment",""))
-                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>✅ {who} ({dept}) — {when}"
-                if comment:
-                    details_html += f"<div style='font-size:11px;color:#333;margin-top:4px'>Comment: {comment}</div>"
-                details_html += "</td></tr>"
-            else:
-                details_html += f"<tr><td style='width:30%;font-weight:600;padding:6px'>{_escape_html(sname)}</td><td style='padding:6px'>❌ Pending</td></tr>"
-        details_html += "</table></div>"
-        
-        # Files
-        if r.get("file_metadata"):
-            details_html += "<div style='margin-top:8px;'><b>Attachments</b><ul>"
-            for fm in r.get("file_metadata", []):
-                details_html += f"<li class='attachment'>{_escape_html(fm.get('original_name'))} ({fm.get('file_size',0)} bytes)</li>"
-            details_html += "</ul></div>"
-
-        details_html += "</div><hr style='border:none;border-top:1px solid #eee;margin:10px 0;'>"
-
-    html = f"""
-    <html><head><meta charset='utf-8'><style>{css}</style></head>
-    <body>
-      {title_html}
-      <table class='main'>
-        <thead><tr>{head_cells}</tr></thead>
-        <tbody>{table_rows_html}</tbody>
-      </table>
-      {details_html}
-    </body></html>
-    """
-    return html
-
-# Add report generator in dashboard (dedented, top-level in module)
-st.markdown("---")
-st.markdown("### 📄 Generate System Report")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    report_status = st.multiselect(
-        "Include Status", 
-        ["draft", "in_progress", "complete"], 
-        default=["in_progress", "complete"],
-        key="report_status"
-    )
-
-with col2:
-    report_priority = st.multiselect(
-        "Include Priority", 
-        ["normal", "high", "urgent"], 
-        default=["normal", "high", "urgent"],
-        key="report_priority"
-    )
-
-with col3:
-    report_limit = st.number_input(
-        "Max records", 
-        min_value=1, 
-        max_value=1000, 
-        value=200,
-        key="report_limit"
-    )
-
-report_style = st.selectbox(
-    "Report layout", 
-    ["Compact (landscape)", "Detailed (portrait)"],
-    key="report_style"
-)
-
-# --- Replace the existing "Generate System Report" handler with this block ---
-
-if st.button("📊 Generate System Report", type="primary"):
-    # Ensure we have data available
-    try:
-        all_data_local = all_data if 'all_data' in locals() else get_all_system_data()
-    except Exception:
-        all_data_local = get_all_system_data()
-
-    filtered_data = [
-        r for r in all_data_local
-        if (r.get("form_status", "draft") in report_status)
-        and (r.get("priority", "normal") in report_priority)
-    ][:report_limit]
-
-    if not filtered_data:
-        st.warning("No records match the selected filters.")
-    else:
-        title = f"IMS System Report — {len(filtered_data)} records"
-        html = build_report_html(filtered_data, title, show_compact=(report_style.startswith("Compact")))
-
-        # Always offer the HTML download (previous behavior)
-        try:
-            html_bytes = html.encode("utf-8")
-            st.download_button(
-                "📥 Download HTML Report",
-                html_bytes,
-                file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
-                mime="text/html",
-                key="download_html_report"
+        with col1:
+            report_status = st.multiselect(
+                "Include Status", 
+                ["draft", "in_progress", "complete"], 
+                default=["in_progress", "complete"],
+                key="report_status"
             )
-        except Exception as e:
-            st.warning(f"Could not prepare HTML download: {e}")
 
-        # If WeasyPrint is available, try to create a PDF and offer it too.
-        if _WEASY:
-            try:
-                pdf = HTML(string=html).write_pdf()
-                st.download_button(
-                    "📥 Download PDF Report",
-                    pdf,
-                    file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                    mime="application/pdf",
-                    key="download_pdf_report"
-                )
-                st.success("📊 System report PDF ready for download!")
-            except Exception as e:
-                st.warning(f"PDF generation failed: {e}. You can still download the HTML report.")
-        else:
-            st.info("WeasyPrint not available. Download HTML report and convert to PDF externally if needed.")
+        with col2:
+            report_priority = st.multiselect(
+                "Include Priority", 
+                ["normal", "high", "urgent"], 
+                default=["normal", "high", "urgent"],
+                key="report_priority"
+            )
+
+        with col3:
+            report_limit = st.number_input(
+                "Max records", 
+                min_value=1, 
+                max_value=1000, 
+                value=200,
+                key="report_limit"
+            )
+
+        report_style = st.selectbox(
+            "Report layout", 
+            ["Compact (landscape)", "Detailed (portrait)"],
+            key="report_style"
+        )
+
+        if st.button("📊 Generate System Report", type="primary"):
+            filtered_data = [
+                r for r in all_data
+                if (r.get("form_status", "draft") in report_status)
+                and (r.get("priority", "normal") in report_priority)
+            ][:report_limit]
+
+            if not filtered_data:
+                st.warning("No records match the selected filters.")
+            else:
+                title = f"IMS System Report — {len(filtered_data)} records"
+                html = build_report_html(filtered_data, title, show_compact=(report_style.startswith("Compact")))
+
+                # Always offer the HTML download
+                try:
+                    html_bytes = html.encode("utf-8")
+                    st.download_button(
+                        "📥 Download HTML Report",
+                        html_bytes,
+                        file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
+                        mime="text/html",
+                        key="download_html_report"
+                    )
+                except Exception as e:
+                    st.warning(f"Could not prepare HTML download: {e}")
+
+                # If WeasyPrint is available, try to create a PDF
+                try:
+                    from weasyprint import HTML as WeasyHTML
+                    pdf = WeasyHTML(string=html).write_pdf()
+                    st.download_button(
+                        "📥 Download PDF Report",
+                        pdf,
+                        file_name=f"ims_system_report_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                        mime="application/pdf",
+                        key="download_pdf_report"
+                    )
+                    st.success("📊 System report PDF ready for download!")
+                except ImportError:
+                    st.info("WeasyPrint not available. Download HTML report and convert to PDF externally if needed.")
+                except Exception as e:
+                    st.warning(f"PDF generation failed: {e}. You can still download the HTML report.")
 
 # --------------------------
 # Footer
@@ -1803,8 +2261,8 @@ if st.button("📊 Generate System Report", type="primary"):
 st.markdown("---")
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.caption("IMS Enhanced v2.3")
+    st.caption("IMS Enhanced v2.4")
 with col2:
-    st.caption("Complete Dashboard & Reporting System")
+    st.caption("Complete Dashboard & Reporting System with Smart Date Fields")
 with col3:
     st.caption(f"Logged in as: {current_user['name']}")
